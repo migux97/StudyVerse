@@ -12,7 +12,9 @@ const _bucket = 'archivos';
 /// Archivo con su versión actual (y su autor) y quién lo tiene bloqueado.
 const _selectArchivo = '*, '
     'current:file_versions!files_current_version_id_fkey(*, uploader:profiles(nombre)), '
-    'locker:profiles!files_locked_by_fkey(nombre)';
+    'locker:profiles!files_locked_by_fkey(nombre), '
+    'pedidos:lock_requests(requested_by, created_at, '
+    'requester:profiles!lock_requests_requested_by_fkey(nombre))';
 
 class SupabaseFilesRepository implements FilesRepository {
   SupabaseFilesRepository(this._client);
@@ -119,8 +121,61 @@ class SupabaseFilesRepository implements FilesRepository {
           ));
 
   @override
-  Future<void> lock(String fileId) =>
-      _guard(() => _client.rpc('lock_file', params: {'p_file_id': fileId}));
+  Future<void> lock(String fileId, int minutos) => _guard(
+      () => _client.rpc('lock_file', params: {'p_file_id': fileId, 'p_minutos': minutos}));
+
+  @override
+  Future<void> requestUnlock(String fileId) =>
+      _guard(() => _client.rpc('request_unlock', params: {'p_file_id': fileId}));
+
+  @override
+  Stream<PedidoEntrante> pedidosEntrantes(String miId) {
+    late final RealtimeChannel canal;
+    final controller = StreamController<PedidoEntrante>.broadcast(
+      onCancel: () => _client.removeChannel(canal),
+    );
+
+    // El evento trae solo ids; se buscan el archivo y quién lo pide.
+    Future<void> alRecibir(PostgresChangePayload p) async {
+      try {
+        final fila = await _client
+            .from('lock_requests')
+            .select('file_id, group_id, file:files(nombre, folder_id), '
+                'requester:profiles!lock_requests_requested_by_fkey(nombre)')
+            .eq('id', p.newRecord['id'] as String)
+            .maybeSingle();
+        if (fila == null) return;
+        final archivo = fila['file'] as Map<String, dynamic>;
+        controller.add(PedidoEntrante(
+          fileId: fila['file_id'] as String,
+          groupId: fila['group_id'] as String,
+          folderId: archivo['folder_id'] as String?,
+          archivo: archivo['nombre'] as String,
+          quien: (fila['requester'] as Map<String, dynamic>?)?['nombre'] as String? ?? 'Alguien',
+        ));
+      } on PostgrestException {
+        // Si ya no existe (lo liberaron al toque), no hay nada que avisar.
+      }
+    }
+
+    final filtro = PostgresChangeFilter(
+      type: PostgresChangeFilterType.eq,
+      column: 'owner_id',
+      value: miId,
+    );
+    canal = _client.channel('pedidos-$miId');
+    for (final evento in [PostgresChangeEvent.insert, PostgresChangeEvent.update]) {
+      canal.onPostgresChanges(
+        event: evento,
+        schema: 'public',
+        table: 'lock_requests',
+        filter: filtro,
+        callback: alRecibir,
+      );
+    }
+    canal.subscribe();
+    return controller.stream;
+  }
 
   @override
   Future<void> unlock(String fileId) =>
@@ -164,7 +219,7 @@ class SupabaseFilesRepository implements FilesRepository {
       value: groupId,
     );
     canal = _client.channel('archivos-$groupId');
-    for (final tabla in ['folders', 'files', 'file_versions']) {
+    for (final tabla in ['folders', 'files', 'file_versions', 'lock_requests']) {
       canal.onPostgresChanges(
         event: PostgresChangeEvent.all,
         schema: 'public',

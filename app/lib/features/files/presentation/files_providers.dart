@@ -29,6 +29,13 @@ final filesProvider =
   return ref.watch(filesRepositoryProvider).files(key.groupId, key.folderId);
 });
 
+/// Pedidos de liberación que me llegan a mí, en vivo, estés en la pantalla que estés.
+final pedidosEntrantesProvider = StreamProvider<PedidoEntrante>((ref) {
+  final miId = ref.watch(authStateProvider.select((s) => s.value?.id));
+  if (miId == null) return const Stream.empty();
+  return ref.watch(filesRepositoryProvider).pedidosEntrantes(miId);
+});
+
 final versionsProvider =
     FutureProvider.family<List<FileVersion>, ({String groupId, String fileId})>((ref, key) {
   ref.watch(filesChangesProvider(key.groupId));

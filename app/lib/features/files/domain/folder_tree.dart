@@ -19,6 +19,21 @@ List<Folder> hijasDe(String? folderId, Iterable<Folder> carpetas) =>
     carpetas.where((c) => c.parentId == folderId).toList()
       ..sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
 
+/// Nombre para subir los cambios propios sin pisar un archivo que otra persona
+/// está editando: "Informe.docx" → "Informe (copia de Ana).docx", y si ya
+/// existe, "Informe (copia de Ana 2).docx".
+String nombreCopia(String original, String autor, Iterable<FileItem> existentes) {
+  final punto = original.lastIndexOf('.');
+  final base = punto > 0 ? original.substring(0, punto) : original;
+  final ext = punto > 0 ? original.substring(punto) : '';
+  var n = 1;
+  while (true) {
+    final candidato = '$base (copia de $autor${n == 1 ? '' : ' $n'})$ext';
+    if (archivoConNombre(candidato, existentes) == null) return candidato;
+    n++;
+  }
+}
+
 /// ¿Hay ya un archivo con ese nombre? (como en la base: sin distinguir mayúsculas)
 FileItem? archivoConNombre(String nombre, Iterable<FileItem> archivos) {
   final buscado = nombre.trim().toLowerCase();

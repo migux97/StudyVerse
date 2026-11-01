@@ -15,7 +15,7 @@ class Subida {
     required this.leer,
     this.fileId,
     this.versionDe,
-    this.bloqueadoPor,
+    this.copiaPorque,
     this.estado = EstadoSubida.pendiente,
     this.error,
   });
@@ -30,17 +30,13 @@ class Subida {
   /// Nombre del archivo existente del que va a ser versión nueva (para mostrarlo).
   final String? versionDe;
 
-  /// Si el archivo existente lo está editando otra persona (no se puede subir).
-  final String? bloqueadoPor;
+  /// Quién está editando el original, si esto se sube como copia para no pisarlo.
+  final String? copiaPorque;
 
   /// Por qué no se puede subir, o `null` si se puede.
-  String? get impedimento {
-    if ((tamano ?? 0) > maxBytesPorArchivo) {
-      return 'Supera el máximo de ${maxBytesPorArchivo ~/ 1024 ~/ 1024} MB';
-    }
-    if (bloqueadoPor != null) return '$bloqueadoPor lo está editando';
-    return null;
-  }
+  String? get impedimento => (tamano ?? 0) > maxBytesPorArchivo
+      ? 'Supera el máximo de ${maxBytesPorArchivo ~/ 1024 ~/ 1024} MB'
+      : null;
 
   EstadoSubida estado;
   String? error;

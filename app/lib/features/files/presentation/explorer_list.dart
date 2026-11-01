@@ -37,9 +37,11 @@ class ExplorerList extends StatelessWidget {
           for (final a in archivos)
             _ArchivoTile(
               archivo: a,
+              hermanos: archivos,
               ancho: ancho,
               ahora: ahora,
               bloqueo: a.estadoBloqueo(miId, ahora),
+              yaLoPedi: a.pedidoPor(miId),
               soyAdmin: soyAdmin,
               puedeEliminar: soyAdmin || a.createdBy == miId,
             ),
@@ -109,8 +111,11 @@ enum _AccionArchivo {
   abrir,
   descargar,
   bloquear,
+  renovar,
   desbloquear,
   forzarDesbloqueo,
+  pedir,
+  subirCopia,
   nuevaVersion,
   historial,
   renombrar,
@@ -120,17 +125,23 @@ enum _AccionArchivo {
 class _ArchivoTile extends ConsumerWidget {
   const _ArchivoTile({
     required this.archivo,
+    required this.hermanos,
     required this.ancho,
     required this.ahora,
     required this.bloqueo,
+    required this.yaLoPedi,
     required this.soyAdmin,
     required this.puedeEliminar,
   });
 
   final FileItem archivo;
+
+  /// Los demás archivos de la carpeta (para elegir un nombre de copia libre).
+  final List<FileItem> hermanos;
   final bool ancho;
   final DateTime ahora;
   final EstadoBloqueo bloqueo;
+  final bool yaLoPedi;
   final bool soyAdmin;
   final bool puedeEliminar;
 
@@ -143,10 +154,16 @@ class _ArchivoTile extends ConsumerWidget {
         abrirVersion(context, ref, v, archivo.nombre, descargar: true);
       case _AccionArchivo.bloquear:
         bloquearArchivo(context, ref, archivo);
+      case _AccionArchivo.renovar:
+        bloquearArchivo(context, ref, archivo, renovar: true);
       case _AccionArchivo.desbloquear:
         desbloquearArchivo(context, ref, archivo, forzar: false);
       case _AccionArchivo.forzarDesbloqueo:
         desbloquearArchivo(context, ref, archivo, forzar: true);
+      case _AccionArchivo.pedir:
+        pedirLiberacion(context, ref, archivo);
+      case _AccionArchivo.subirCopia:
+        subirNuevaVersion(context, ref, archivo, comoCopia: true, existentes: hermanos);
       case _AccionArchivo.nuevaVersion:
         subirNuevaVersion(context, ref, archivo);
       case _AccionArchivo.historial:
@@ -166,11 +183,13 @@ class _ArchivoTile extends ConsumerWidget {
     final fecha = formatearFecha(v.createdAt, ahora);
     final secundario = theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant);
 
-    // Mientras otra persona lo edita, solo se puede abrir, descargar y ver el historial.
+    // Mientras otra persona lo edita no se puede pisar (versión, nombre, eliminar),
+    // pero no hace falta esperar: se le pide o se suben los cambios como copia.
     final libreParaMi = bloqueo != EstadoBloqueo.deOtro;
     final editor = archivo.lockedByNombre ?? 'Otra persona';
+    final quienesLoPiden = archivo.pedidos.map((p) => p.nombre ?? 'Alguien').toSet().join(', ');
     PopupMenuItem<_AccionArchivo> item(_AccionArchivo valor, IconData icono, String texto,
-            {bool habilitado = true}) =>
+            {bool habilitado = true, String? detalle}) =>
         PopupMenuItem(
           value: valor,
           enabled: habilitado,
@@ -178,7 +197,11 @@ class _ArchivoTile extends ConsumerWidget {
             enabled: habilitado,
             leading: Icon(icono),
             title: Text(texto),
-            subtitle: habilitado ? null : Text('$editor lo está editando'),
+            subtitle: detalle != null
+                ? Text(detalle)
+                : habilitado
+                    ? null
+                    : Text('$editor lo está editando'),
           ),
         );
 
@@ -189,18 +212,36 @@ class _ArchivoTile extends ConsumerWidget {
         item(_AccionArchivo.abrir, Icons.open_in_new, 'Abrir'),
         item(_AccionArchivo.descargar, Icons.download_rounded, 'Descargar'),
         const PopupMenuDivider(),
-        switch (bloqueo) {
-          EstadoBloqueo.libre =>
-            item(_AccionArchivo.bloquear, Icons.lock_outline, 'Estoy editando este archivo'),
-          EstadoBloqueo.mio =>
-            item(_AccionArchivo.desbloquear, Icons.lock_open_outlined, 'Ya terminé: desbloquear'),
-          EstadoBloqueo.deOtro => soyAdmin
-              ? item(_AccionArchivo.forzarDesbloqueo, Icons.lock_open_outlined, 'Forzar desbloqueo')
-              : item(_AccionArchivo.bloquear, Icons.lock_outline, 'Estoy editando este archivo',
-                  habilitado: false),
+        ...switch (bloqueo) {
+          EstadoBloqueo.libre => [
+              item(_AccionArchivo.bloquear, Icons.lock_outline, 'Estoy editando este archivo'),
+              item(_AccionArchivo.nuevaVersion, Icons.upload_rounded, 'Subir nueva versión'),
+            ],
+          EstadoBloqueo.mio => [
+              item(
+                _AccionArchivo.desbloquear,
+                Icons.lock_open_outlined,
+                archivo.pedidos.isEmpty ? 'Ya terminé: desbloquear' : 'Liberar para $quienesLoPiden',
+              ),
+              item(_AccionArchivo.renovar, Icons.more_time_rounded, 'Necesito más tiempo',
+                  detalle: formatearVencimiento(archivo.vencimientoBloqueo(ahora)!)),
+              item(_AccionArchivo.nuevaVersion, Icons.upload_rounded, 'Subir nueva versión',
+                  detalle: 'Lo desbloquea solo'),
+            ],
+          EstadoBloqueo.deOtro => [
+              item(
+                _AccionArchivo.pedir,
+                Icons.front_hand_outlined,
+                yaLoPedi ? 'Ya se lo pediste a $editor' : 'Pedirle a $editor que lo libere',
+                habilitado: !yaLoPedi,
+                detalle: yaLoPedi ? 'Te avisamos cuando lo libere' : null,
+              ),
+              item(_AccionArchivo.subirCopia, Icons.file_copy_outlined, 'Subir mis cambios como copia',
+                  detalle: 'Sin pisar lo que está editando $editor'),
+              if (soyAdmin)
+                item(_AccionArchivo.forzarDesbloqueo, Icons.lock_open_outlined, 'Forzar desbloqueo'),
+            ],
         },
-        item(_AccionArchivo.nuevaVersion, Icons.upload_rounded, 'Subir nueva versión',
-            habilitado: libreParaMi),
         item(_AccionArchivo.historial, Icons.history_rounded, 'Historial (v${v.versionNumber})'),
         item(_AccionArchivo.renombrar, Icons.edit_outlined, 'Cambiar nombre', habilitado: libreParaMi),
         if (puedeEliminar)
@@ -216,7 +257,12 @@ class _ArchivoTile extends ConsumerWidget {
         const SizedBox(width: 8),
         Flexible(
           child: _ChipBloqueo(
-            texto: bloqueo == EstadoBloqueo.mio ? 'Lo estás editando' : '$editor está editando',
+            texto: switch (bloqueo) {
+              EstadoBloqueo.mio when archivo.pedidos.isNotEmpty =>
+                'Lo estás editando · $quienesLoPiden lo necesita',
+              EstadoBloqueo.mio => 'Lo estás editando',
+              _ => '$editor está editando',
+            },
             detalle: formatearVencimiento(archivo.vencimientoBloqueo(ahora)!),
             mio: bloqueo == EstadoBloqueo.mio,
           ),

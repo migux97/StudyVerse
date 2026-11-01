@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/widgets/auth_layout.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/text_input_dialog.dart';
+import '../../auth/presentation/auth_providers.dart';
 import '../domain/file_item.dart';
 import '../domain/files_repository.dart';
 import '../domain/folder_tree.dart';
@@ -98,7 +99,7 @@ Subida _subidaDe(
   String? nombre,
   String? fileId,
   String? versionDe,
-  String? bloqueadoPor,
+  String? copiaPorque,
 }) =>
     Subida(
       nombre: nombre ?? f.name,
@@ -106,8 +107,19 @@ Subida _subidaDe(
       leer: f.readAsBytes,
       fileId: fileId,
       versionDe: versionDe,
-      bloqueadoPor: bloqueadoPor,
+      copiaPorque: copiaPorque,
     );
+
+/// Mi nombre de pila para las copias. Espera el perfil: si la página se abrió
+/// directo en una carpeta, puede que todavía no se haya cargado.
+Future<String> _miNombre(WidgetRef ref) async {
+  try {
+    final perfil = await ref.read(currentProfileProvider.future);
+    return perfil?.nombre.split(' ').first ?? 'otro integrante';
+  } catch (_) {
+    return 'otro integrante';
+  }
+}
 
 /// Elige archivos y los sube a la carpeta. Los que ya existen (mismo nombre)
 /// quedan como versión nueva.
@@ -123,14 +135,19 @@ Future<void> elegirYSubir(
   if (elegidos == null || elegidos.isEmpty || !context.mounted) return;
 
   final ahora = DateTime.now();
+  final yo = await _miNombre(ref);
+  if (!context.mounted) return;
   final subidas = elegidos.map((f) {
     final existente = archivoConNombre(f.name, existentes);
-    final deOtro = existente?.estadoBloqueo(miId, ahora) == EstadoBloqueo.deOtro;
-    return _subidaDe(
-      f,
-      versionDe: existente?.nombre,
-      bloqueadoPor: deOtro ? (existente!.lockedByNombre ?? 'Otra persona') : null,
-    );
+    // Si otra persona lo está editando, no se espera: se sube como copia al lado.
+    if (existente?.estadoBloqueo(miId, ahora) == EstadoBloqueo.deOtro) {
+      return _subidaDe(
+        f,
+        nombre: nombreCopia(existente!.nombre, yo, existentes),
+        copiaPorque: existente.lockedByNombre ?? 'Otra persona',
+      );
+    }
+    return _subidaDe(f, versionDe: existente?.nombre);
   }).toList();
   final nota = await confirmarSubida(context, subidas);
   if (nota == null || !context.mounted) return;
@@ -144,12 +161,27 @@ Future<void> elegirYSubir(
 }
 
 /// "Subir nueva versión": el archivo elegido reemplaza al actual, mantiene el nombre.
-Future<void> subirNuevaVersion(BuildContext context, WidgetRef ref, FileItem archivo) async {
+/// Con [comoCopia] (otra persona lo está editando) se sube al lado, sin pisarlo.
+Future<void> subirNuevaVersion(
+  BuildContext context,
+  WidgetRef ref,
+  FileItem archivo, {
+  bool comoCopia = false,
+  List<FileItem> existentes = const [],
+}) async {
   final elegido = await _elegir(
       context, () => FilePicker.pickFile(dialogTitle: 'Nueva versión de ${archivo.nombre}'));
   if (elegido == null || !context.mounted) return;
 
-  final subida = _subidaDe(elegido, nombre: archivo.nombre, fileId: archivo.id, versionDe: archivo.nombre);
+  final yo = comoCopia ? await _miNombre(ref) : '';
+  if (!context.mounted) return;
+  final subida = comoCopia
+      ? _subidaDe(
+          elegido,
+          nombre: nombreCopia(archivo.nombre, yo, existentes),
+          copiaPorque: archivo.lockedByNombre ?? 'Otra persona',
+        )
+      : _subidaDe(elegido, nombre: archivo.nombre, fileId: archivo.id, versionDe: archivo.nombre);
   final nota = await confirmarSubida(context, [subida]);
   if (nota == null || !context.mounted) return;
 
@@ -163,13 +195,19 @@ Future<void> subirNuevaVersion(BuildContext context, WidgetRef ref, FileItem arc
 
 // Bloqueos -------------------------------------------------------------------------
 
-/// "Estoy editando este archivo": lo bloquea y ofrece descargar la versión actual.
-Future<void> bloquearArchivo(BuildContext context, WidgetRef ref, FileItem archivo) async {
+/// "Estoy editando este archivo": pregunta por cuánto tiempo, lo bloquea y
+/// ofrece descargar la versión actual. Si ya era mío, renueva el tiempo.
+Future<void> bloquearArchivo(BuildContext context, WidgetRef ref, FileItem archivo,
+    {bool renovar = false}) async {
+  final opcion = await _elegirDuracion(context, renovar: renovar);
+  if (opcion == null || !context.mounted) return;
+
   final ok = await _intentar(context, () async {
-    await ref.read(filesRepositoryProvider).lock(archivo.id);
+    await ref.read(filesRepositoryProvider).lock(archivo.id, minutosDeBloqueo(opcion, DateTime.now()));
     ref.invalidate(filesProvider((groupId: archivo.groupId, folderId: archivo.folderId)));
   });
   if (!ok || !context.mounted) return;
+  if (renovar) return mostrarMensaje(context, 'Listo, tenés más tiempo');
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(
@@ -177,13 +215,63 @@ Future<void> bloquearArchivo(BuildContext context, WidgetRef ref, FileItem archi
       duration: const Duration(seconds: 8),
       content: const Text(
         'Listo: el grupo ve que lo estás editando. Se desbloquea solo cuando '
-        'subís la versión nueva (o a las 24 h).',
+        'subís la versión nueva o cuando vence.',
       ),
       action: SnackBarAction(
         label: 'Descargar',
         onPressed: () => abrirVersion(context, ref, archivo.current!, archivo.nombre, descargar: true),
       ),
     ));
+}
+
+Future<DuracionBloqueo?> _elegirDuracion(BuildContext context, {required bool renovar}) {
+  final ahora = DateTime.now();
+  final noche = minutosDeBloqueo(DuracionBloqueo.hastaLaNoche, ahora);
+  return showModalBottomSheet<DuracionBloqueo>(
+    context: context,
+    showDragHandle: true,
+    constraints: const BoxConstraints(maxWidth: 480),
+    builder: (ctx) => SafeArea(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        ListTile(
+          title: Text(renovar ? '¿Cuánto tiempo más?' : '¿Por cuánto tiempo lo vas a editar?'),
+          subtitle: const Text('Mientras tanto, el resto puede subir sus cambios como copia o pedirte que lo liberes.'),
+        ),
+        ListTile(
+          leading: const Icon(Icons.timer_outlined),
+          title: const Text('2 horas'),
+          subtitle: const Text('Recomendado'),
+          onTap: () => Navigator.pop(ctx, DuracionBloqueo.dosHoras),
+        ),
+        // Si ya es tarde, "hasta esta noche" sería lo mismo que 2 horas.
+        if (noche > 120)
+          ListTile(
+            leading: const Icon(Icons.nights_stay_outlined),
+            title: const Text('Hasta esta noche'),
+            subtitle: Text('Hasta las 23:59 (${noche ~/ 60} h)'),
+            onTap: () => Navigator.pop(ctx, DuracionBloqueo.hastaLaNoche),
+          ),
+        ListTile(
+          leading: const Icon(Icons.today_outlined),
+          title: const Text('24 horas'),
+          onTap: () => Navigator.pop(ctx, DuracionBloqueo.unDia),
+        ),
+        const SizedBox(height: 8),
+      ]),
+    ),
+  );
+}
+
+/// "Pedirle a Juan que lo libere": le llega un aviso en vivo.
+Future<void> pedirLiberacion(BuildContext context, WidgetRef ref, FileItem archivo) async {
+  final ok = await _intentar(context, () async {
+    await ref.read(filesRepositoryProvider).requestUnlock(archivo.id);
+    ref.invalidate(filesProvider((groupId: archivo.groupId, folderId: archivo.folderId)));
+  });
+  if (ok && context.mounted) {
+    mostrarMensaje(context,
+        'Le avisamos a ${archivo.lockedByNombre ?? 'quien lo está editando'}. Mientras tanto podés subir tus cambios como copia.');
+  }
 }
 
 /// Desbloquear el propio, o forzar uno ajeno (admin).

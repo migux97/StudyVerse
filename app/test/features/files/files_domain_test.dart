@@ -129,19 +129,70 @@ void main() {
   });
 
   group('qué se puede subir', () {
-    Subida subida({int tamano = 100, String? bloqueadoPor}) => Subida(
+    Subida subida({int tamano = 100, String? copiaPorque}) => Subida(
           nombre: 'x.pdf',
           tamano: tamano,
           leer: () async => Uint8List(0),
-          bloqueadoPor: bloqueadoPor,
+          copiaPorque: copiaPorque,
         );
 
     test('se puede subir', () => expect(subida().impedimento, isNull));
-    test('no si lo edita otra persona', () {
-      expect(subida(bloqueadoPor: 'Ana').impedimento, 'Ana lo está editando');
+    test('aunque lo edite otra persona (va como copia)', () {
+      expect(subida(copiaPorque: 'Juan').impedimento, isNull);
     });
     test('no si supera el máximo', () {
       expect(subida(tamano: maxBytesPorArchivo + 1).impedimento, contains('50 MB'));
+    });
+  });
+
+  group('bloqueos flexibles', () {
+    final ahora = DateTime(2026, 11, 1, 12);
+
+    test('vence en lock_until', () {
+      final f = FileItem(
+        id: 'f',
+        groupId: 'g',
+        nombre: 'a.docx',
+        lockedBy: 'beto',
+        lockedAt: ahora.subtract(const Duration(minutes: 30)),
+        lockUntil: ahora.add(const Duration(minutes: 90)),
+        createdAt: DateTime.utc(2026),
+      );
+      expect(f.vencimientoBloqueo(ahora), const Duration(minutes: 90));
+      expect(f.estaBloqueado(ahora.add(const Duration(hours: 2))), isFalse);
+    });
+
+    test('duración elegida', () {
+      expect(minutosDeBloqueo(DuracionBloqueo.dosHoras, ahora), 120);
+      expect(minutosDeBloqueo(DuracionBloqueo.unDia, ahora), 1440);
+      expect(minutosDeBloqueo(DuracionBloqueo.hastaLaNoche, ahora), 11 * 60 + 59);
+      expect(minutosDeBloqueo(DuracionBloqueo.hastaLaNoche, DateTime(2026, 11, 1, 23)), 120,
+          reason: 'si ya es tarde, al menos 2 h');
+    });
+
+    test('nombre de la copia', () {
+      final existentes = [_archivo('Informe.docx'), _archivo('Informe (copia de Ana).docx')];
+      expect(nombreCopia('Informe.docx', 'Juan', existentes), 'Informe (copia de Juan).docx');
+      expect(nombreCopia('Informe.docx', 'Ana', existentes), 'Informe (copia de Ana 2).docx');
+      expect(nombreCopia('Makefile', 'Ana', existentes), 'Makefile (copia de Ana)');
+    });
+
+    test('pedidos desde la base', () {
+      final f = FileItem.fromMap({
+        'id': 'f',
+        'group_id': 'g',
+        'nombre': 'a.docx',
+        'locked_by': 'beto',
+        'locked_at': '2026-11-01T12:00:00Z',
+        'lock_until': '2026-11-01T14:00:00Z',
+        'pedidos': [
+          {'requested_by': 'ana', 'created_at': '2026-11-01T12:30:00Z', 'requester': {'nombre': 'Ana'}},
+        ],
+        'created_at': '2026-11-01T10:00:00Z',
+      });
+      expect(f.pedidoPor('ana'), isTrue);
+      expect(f.pedidoPor('caro'), isFalse);
+      expect(f.pedidos.single.nombre, 'Ana');
     });
   });
 

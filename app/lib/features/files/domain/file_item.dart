@@ -72,6 +72,8 @@ class FileItem {
     this.lockedBy,
     this.lockedByNombre,
     this.lockedAt,
+    this.lockUntil,
+    this.pedidos = const [],
     this.createdBy,
     required this.createdAt,
   });
@@ -84,16 +86,24 @@ class FileItem {
   final String? lockedBy;
   final String? lockedByNombre;
   final DateTime? lockedAt;
+
+  /// Hasta cuándo dura el bloqueo (elegido al bloquear).
+  final DateTime? lockUntil;
+
+  /// Quiénes le pidieron a quien lo edita que lo libere.
+  final List<PedidoLiberacion> pedidos;
   final String? createdBy;
   final DateTime createdAt;
 
   FileKind get kind => fileKindFor(nombre);
 
-  /// Bloqueo vigente (los bloqueos vencen a las 24 h, como `lock_ttl()` en la base).
+  /// Vence en `lock_until`; los bloqueos sin esa fecha, a las 24 h (como en la base).
+  DateTime? get _venceEl => lockUntil ?? lockedAt?.add(duracionBloqueo);
+
   bool estaBloqueado(DateTime ahora) =>
-      lockedBy != null &&
-      lockedAt != null &&
-      ahora.difference(lockedAt!) < duracionBloqueo;
+      lockedBy != null && _venceEl != null && ahora.isBefore(_venceEl!);
+
+  bool pedidoPor(String? userId) => pedidos.any((p) => p.requestedBy == userId);
 
   EstadoBloqueo estadoBloqueo(String? miId, DateTime ahora) {
     if (!estaBloqueado(ahora)) return EstadoBloqueo.libre;
@@ -102,11 +112,13 @@ class FileItem {
 
   /// Cuánto le queda al bloqueo antes de vencer.
   Duration? vencimientoBloqueo(DateTime ahora) =>
-      estaBloqueado(ahora) ? lockedAt!.add(duracionBloqueo).difference(ahora) : null;
+      estaBloqueado(ahora) ? _venceEl!.difference(ahora) : null;
 
-  /// Fila de `files`, con `current:file_versions(...)` y `locker:profiles(nombre)`.
+  /// Fila de `files`, con `current:file_versions(...)`, `locker:profiles(nombre)`
+  /// y `pedidos:lock_requests(...)`.
   factory FileItem.fromMap(Map<String, dynamic> map) {
     final current = map['current'] as Map<String, dynamic>?;
+    DateTime? fecha(String k) => map[k] == null ? null : DateTime.parse(map[k] as String);
     return FileItem(
       id: map['id'] as String,
       groupId: map['group_id'] as String,
@@ -115,11 +127,65 @@ class FileItem {
       current: current == null ? null : FileVersion.fromMap(current),
       lockedBy: map['locked_by'] as String?,
       lockedByNombre: (map['locker'] as Map<String, dynamic>?)?['nombre'] as String?,
-      lockedAt: map['locked_at'] == null ? null : DateTime.parse(map['locked_at'] as String),
+      lockedAt: fecha('locked_at'),
+      lockUntil: fecha('lock_until'),
+      pedidos: [
+        for (final p in (map['pedidos'] as List? ?? const []))
+          PedidoLiberacion.fromMap(p as Map<String, dynamic>),
+      ],
       createdBy: map['created_by'] as String?,
       createdAt: DateTime.parse(map['created_at'] as String),
     );
   }
+}
+
+/// "Ana necesita editar este archivo": pedido a quien lo tiene bloqueado.
+class PedidoLiberacion {
+  const PedidoLiberacion({required this.requestedBy, this.nombre, required this.createdAt});
+
+  final String requestedBy;
+  final String? nombre;
+  final DateTime createdAt;
+
+  factory PedidoLiberacion.fromMap(Map<String, dynamic> map) => PedidoLiberacion(
+        requestedBy: map['requested_by'] as String,
+        nombre: (map['requester'] as Map<String, dynamic>?)?['nombre'] as String?,
+        createdAt: DateTime.parse(map['created_at'] as String),
+      );
+}
+
+/// Pedido que me llega en vivo (para avisarme aunque esté en otra pantalla).
+class PedidoEntrante {
+  const PedidoEntrante({
+    required this.fileId,
+    required this.groupId,
+    required this.folderId,
+    required this.archivo,
+    required this.quien,
+  });
+
+  final String fileId;
+  final String groupId;
+  final String? folderId;
+  final String archivo;
+  final String quien;
+}
+
+/// Opciones de duración al bloquear.
+enum DuracionBloqueo { dosHoras, hastaLaNoche, unDia }
+
+/// Minutos que dura el bloqueo según la opción. "Hasta la noche" = hasta las
+/// 23:59 de hoy (mínimo 2 h, por si ya es tarde).
+int minutosDeBloqueo(DuracionBloqueo opcion, DateTime ahora) => switch (opcion) {
+      DuracionBloqueo.dosHoras => 120,
+      DuracionBloqueo.unDia => 24 * 60,
+      DuracionBloqueo.hastaLaNoche => _minutosHastaLaNoche(ahora),
+    };
+
+int _minutosHastaLaNoche(DateTime ahora) {
+  final noche = DateTime(ahora.year, ahora.month, ahora.day, 23, 59);
+  final minutos = noche.difference(ahora).inMinutes;
+  return minutos < 120 ? 120 : minutos;
 }
 
 const duracionBloqueo = Duration(hours: 24);

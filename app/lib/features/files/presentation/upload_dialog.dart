@@ -30,10 +30,14 @@ class _SubidaDialogState extends State<_SubidaDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final validas = widget.subidas.where((s) => s.impedimento == null).toList();
-    final hayVersiones = validas.any((s) => s.versionDe != null);
-    final titulo = widget.subidas.length == 1
-        ? (hayVersiones ? 'Subir nueva versión' : 'Subir archivo')
-        : 'Subir ${widget.subidas.length} archivos';
+    final hayVersiones = validas.any((s) => s.versionDe != null || s.copiaPorque != null);
+    final unica = widget.subidas.length == 1 ? widget.subidas.single : null;
+    final titulo = switch (unica) {
+      null => 'Subir ${widget.subidas.length} archivos',
+      Subida(copiaPorque: _?) => 'Subir como copia',
+      Subida(versionDe: _?) => 'Subir nueva versión',
+      _ => 'Subir archivo',
+    };
 
     return AlertDialog(
       title: Text(titulo),
@@ -59,7 +63,10 @@ class _SubidaDialogState extends State<_SubidaDialog> {
                             ? '${s.impedimento}: no se va a subir'
                             : [
                                 if (s.tamano != null) formatBytes(s.tamano!),
-                                s.versionDe != null ? 'nueva versión' : 'archivo nuevo',
+                                if (s.copiaPorque != null)
+                                  '${s.copiaPorque} edita el original: se sube como copia'
+                                else
+                                  s.versionDe != null ? 'nueva versión' : 'archivo nuevo',
                               ].join(' · '),
                         style: TextStyle(color: s.impedimento != null ? theme.colorScheme.error : null),
                       ),

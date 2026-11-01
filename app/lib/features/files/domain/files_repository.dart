@@ -34,8 +34,14 @@ abstract interface class FilesRepository {
   /// real si [descargar] (en Storage se llama `v{n}`).
   Future<String> downloadUrl(FileVersion version, String nombre, {bool descargar = true});
 
-  /// "Estoy editando este archivo". Si ya era mío, renueva las 24 h.
-  Future<void> lock(String fileId);
+  /// "Estoy editando este archivo" por [minutos] (15 a 1440). Si ya era mío, lo renueva.
+  Future<void> lock(String fileId, int minutos);
+
+  /// Le pide a quien lo está editando que lo libere.
+  Future<void> requestUnlock(String fileId);
+
+  /// Pedidos que me hacen a mí, en vivo (para avisarme en cualquier pantalla).
+  Stream<PedidoEntrante> pedidosEntrantes(String miId);
 
   /// Desbloquea (propio, vencido, o cualquiera si sos admin).
   Future<void> unlock(String fileId);
