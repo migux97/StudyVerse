@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(16);
+select plan(25);
 
 create or replace function pg_temp.crear_usuario(p_id uuid, p_nombre text)
 returns void language sql as $$
@@ -92,17 +92,41 @@ select pg_temp.como('00000000-0000-0000-0000-00000000000a');
 select is((select locked_by from public.unlock_file((select file_id from v))), null,
   'el admin puede forzar el desbloqueo');
 
--- Vencimiento a las 24 h
+-- Duración elegible
 select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+select is((select lock_until - now() from public.lock_file((select file_id from v))),
+  interval '2 hours', 'por defecto el bloqueo dura 2 h');
+select is((select lock_until - now() from public.lock_file((select file_id from v), 5)),
+  interval '15 minutes', 'mínimo 15 minutos');
+select is((select lock_until - now() from public.lock_file((select file_id from v), 99999)),
+  interval '24 hours', 'máximo 24 h (renovar también vale)');
+
+-- Pedir que lo libere
+select pg_temp.como('00000000-0000-0000-0000-00000000000c');
+select is((select owner_id from public.request_unlock((select file_id from v))),
+  '00000000-0000-0000-0000-00000000000b'::uuid, 'Caro le pide el archivo a Beto');
+select throws_ok(format($$ select public.request_unlock(%L) $$, (select file_id from v)),
+  'P0001', 'Ya se lo pediste hace un rato', 'no se puede insistir dentro de los 10 minutos');
+select pg_temp.como('00000000-0000-0000-0000-00000000000b');
+select is((select count(*)::int from public.lock_requests where owner_id = auth.uid()), 1,
+  'Beto ve el pedido');
+select throws_ok(format($$ select public.request_unlock(%L) $$, (select file_id from v)),
+  'P0001', 'El archivo ya está libre', 'no tiene sentido pedirse un archivo propio');
+select public.unlock_file((select file_id from v));
+select is((select count(*)::int from public.lock_requests), 0, 'al liberarlo, los pedidos se borran');
+select is((select lock_until from public.files where id = (select file_id from v)), null,
+  'y se limpia el vencimiento');
+
+-- Vencimiento
 select public.lock_file((select file_id from v));
 set local role postgres;
-update public.files set locked_at = now() - interval '25 hours' where id = (select file_id from v);
+update public.files set lock_until = now() - interval '1 minute' where id = (select file_id from v);
 select pg_temp.como('00000000-0000-0000-0000-00000000000c');
 select is((select locked_by from public.lock_file((select file_id from v))),
   '00000000-0000-0000-0000-00000000000c'::uuid, 'un bloqueo vencido se puede tomar');
 
 set local role postgres;
-update public.files set locked_at = now() - interval '25 hours' where id = (select file_id from v);
+update public.files set lock_until = now() - interval '1 minute' where id = (select file_id from v);
 select is(public.release_expired_locks(), 1, 'release_expired_locks libera los vencidos');
 select is((select locked_by from public.files where id = (select file_id from v)), null,
   'y el archivo queda libre');
