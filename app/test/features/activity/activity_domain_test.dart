@@ -52,6 +52,11 @@ void main() {
       expect(_texto(_evento('archivo_bloqueado', {'nombre': 'a.pdf'}), miId: 'juan'), 'Vos estás editando a.pdf');
     });
 
+    test('telegram', () {
+      expect(_texto(_evento('telegram_vinculado', {'chat': 'TP Bio'})),
+          'Juan conectó el chat de Telegram "TP Bio"');
+    });
+
     test('tipo desconocido no rompe', () {
       expect(_texto(_evento('algo_nuevo', {})), 'Juan hizo un cambio');
     });

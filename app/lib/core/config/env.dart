@@ -10,6 +10,9 @@ class Env {
   static String get webUrl =>
       _webUrl.isNotEmpty ? _webUrl : (kIsWeb ? Uri.base.origin : 'http://localhost:3000');
 
+  /// Usuario del bot de Telegram (sin @), p. ej. TPDriveBot.
+  static const telegramBot = String.fromEnvironment('TELEGRAM_BOT_USERNAME');
+
   /// Deep link al que vuelve el login con Google en Android.
   static const authRedirectMobile = 'io.tpdrive.app://login-callback';
 

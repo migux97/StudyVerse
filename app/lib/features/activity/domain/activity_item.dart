@@ -70,6 +70,7 @@ class ActivityItem {
     'tarea_completada' => '${v('completó', 'completaste')} la tarea "$titulo"',
     'tarea_asignada' => '${v('asignó', 'asignaste')} "$titulo" a $para',
     'liberacion_pedida' => '${v('le pidió', 'le pediste')} $nombre a ${para ?? 'quien lo editaba'}',
+    'telegram_vinculado' => '${v('conectó', 'conectaste')} el chat de Telegram "${p['chat']}"',
     _ => v('hizo un cambio', 'hiciste un cambio'),
   };
   return (actor: actor, accion: accion);

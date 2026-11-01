@@ -14,6 +14,7 @@ import '../../features/groups/presentation/group_screen.dart';
 import '../../features/groups/presentation/groups_screen.dart';
 import '../../features/groups/presentation/join_group_screen.dart';
 import '../../features/groups/presentation/members_screen.dart';
+import '../../features/groups/presentation/telegram_screen.dart';
 import '../../features/tasks/presentation/contributions_screen.dart';
 import '../../features/tasks/presentation/tasks_screen.dart';
 
@@ -30,6 +31,7 @@ class Routes {
   static String tareas(String id) => '/grupos/$id/tareas';
   static String actividad(String id) => '/grupos/$id/actividad';
   static String aportes(String id) => '/grupos/$id/aportes';
+  static String telegram(String id) => '/grupos/$id/telegram';
   static String unirse(String codigo) => '/unirse/$codigo';
 
   static const publicas = {login, registro, recuperar};
@@ -80,6 +82,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'miembros',
             builder: (_, s) => MembersScreen(groupId: s.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: 'telegram',
+            builder: (_, s) => TelegramScreen(groupId: s.pathParameters['id']!),
           ),
           // Secciones del grupo: sin animación al cambiar de pestaña.
           GoRoute(

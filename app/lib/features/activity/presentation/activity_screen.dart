@@ -90,6 +90,7 @@ class _EventoTile extends StatelessWidget {
         'tarea_creada' || 'tarea_asignada' => Icons.add_task,
         'tarea_completada' => Icons.task_alt,
         'liberacion_pedida' => Icons.front_hand_outlined,
+        'telegram_vinculado' => Icons.send_outlined,
         _ => Icons.circle_outlined,
       };
 
