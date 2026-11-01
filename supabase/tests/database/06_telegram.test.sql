@@ -55,7 +55,8 @@ select pg_temp.como('00000000-0000-0000-0000-00000000000b');
 select is((select chat_title from public.telegram_links), 'Grupo TP', 'los miembros ven el chat vinculado');
 delete from public.telegram_links;
 set local role postgres;
-select is((select count(*)::int from public.telegram_links), 1, 'un miembro no puede desvincular');
+select is((select count(*)::int from public.telegram_links where group_id = (select id from g)), 1,
+  'un miembro no puede desvincular');
 
 -- Código vencido
 select pg_temp.como('00000000-0000-0000-0000-00000000000a');
@@ -76,7 +77,7 @@ select is((select count(*)::int from public.telegram_outbox), 0, 'crear una tare
 select pg_temp.como('00000000-0000-0000-0000-00000000000b');
 update public.tasks set estado = 'hecha';
 set local role postgres;
-select is((select count(*)::int from public.telegram_outbox where kind = 'actividad'), 1,
+select is((select count(*)::int from public.telegram_outbox where kind = 'actividad' and group_id = (select id from g)), 1,
   'completar una tarea se encola para el chat vinculado');
 
 create temp table claim on commit drop as select * from public.claim_telegram_outbox();
@@ -93,15 +94,25 @@ insert into public.tasks (group_id, titulo, due_date, created_by) values
   ((select id from g), 'Vence pasado', date '2026-11-03', auth.uid());
 set local role postgres;
 
-select is(public.enqueue_due_reminders(timestamptz '2026-11-01 09:30-03'), 0, 'antes de las 10 no avisa');
-select is(public.enqueue_due_reminders(timestamptz '2026-11-01 10:15-03'), 1, 'a las 10 avisa solo las que vencen mañana');
-select is(public.enqueue_due_reminders(timestamptz '2026-11-01 11:00-03'), 0, 'no repite el recordatorio');
-select is((select tarea from public.claim_telegram_outbox() where kind = 'recordatorio'), 'Vence mañana',
-  'el recordatorio lleva la tarea');
+-- Se cuentan solo los de este grupo: la base local puede tener otros datos.
+create or replace function pg_temp.recordatorios()
+returns integer language sql as $$
+  select count(*)::int from public.telegram_outbox
+  where kind = 'recordatorio' and group_id = (select id from g)
+$$;
+
+select public.enqueue_due_reminders(timestamptz '2026-11-01 09:30-03');
+select is(pg_temp.recordatorios(), 0, 'antes de las 10 no avisa');
+select public.enqueue_due_reminders(timestamptz '2026-11-01 10:15-03');
+select is(pg_temp.recordatorios(), 1, 'a las 10 avisa solo las que vencen mañana');
+select public.enqueue_due_reminders(timestamptz '2026-11-01 11:00-03');
+select is(pg_temp.recordatorios(), 1, 'no repite el recordatorio');
+select is((select tarea from public.claim_telegram_outbox() where kind = 'recordatorio' and grupo = 'TP'),
+  'Vence mañana', 'el recordatorio lleva la tarea');
 
 update public.tasks set due_date = date '2026-11-02' where titulo = 'Vence pasado';
-select is(public.enqueue_due_reminders(timestamptz '2026-11-01 11:00-03'), 1,
-  'si cambia la fecha límite, vuelve a corresponder el recordatorio');
+select public.enqueue_due_reminders(timestamptz '2026-11-01 11:00-03');
+select is(pg_temp.recordatorios(), 2, 'si cambia la fecha límite, vuelve a corresponder el recordatorio');
 
 select * from finish();
 rollback;
