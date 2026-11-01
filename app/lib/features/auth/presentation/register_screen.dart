@@ -114,7 +114,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 children: [
                   const Text('¿Ya tenés cuenta?'),
                   TextButton(
-                    onPressed: () => context.go(Routes.login),
+                    onPressed: () => context.go(Routes.conDestino(
+                      Routes.login,
+                      GoRouterState.of(context).uri.queryParameters['from'],
+                    )),
                     child: const Text('Entrá'),
                   ),
                 ],

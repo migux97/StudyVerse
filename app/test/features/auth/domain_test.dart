@@ -56,13 +56,25 @@ void main() {
   group('authRedirect', () {
     test('sin sesión manda al login', () {
       expect(authRedirect(loggedIn: false, location: '/'), Routes.login);
-      expect(authRedirect(loggedIn: false, location: '/perfil'), Routes.login);
       expect(authRedirect(loggedIn: false, location: '/registro'), isNull);
+    });
+
+    test('sin sesión recuerda a dónde se quería ir', () {
+      expect(authRedirect(loggedIn: false, location: '/unirse/ABCD2345'),
+          '/login?from=%2Funirse%2FABCD2345');
     });
 
     test('con sesión no muestra pantallas de acceso', () {
       expect(authRedirect(loggedIn: true, location: '/login'), Routes.grupos);
       expect(authRedirect(loggedIn: true, location: '/perfil'), isNull);
+    });
+
+    test('después del login vuelve al destino, solo si es interno', () {
+      expect(authRedirect(loggedIn: true, location: '/login', from: '/unirse/ABCD2345'),
+          '/unirse/ABCD2345');
+      expect(authRedirect(loggedIn: true, location: '/login', from: '//evil.com'), Routes.grupos);
+      expect(authRedirect(loggedIn: true, location: '/login', from: 'https://evil.com'),
+          Routes.grupos);
     });
   });
 

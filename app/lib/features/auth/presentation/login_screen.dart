@@ -104,7 +104,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   const Text('¿No tenés cuenta?'),
                   TextButton(
-                    onPressed: () => context.go(Routes.registro),
+                    onPressed: () => context.go(Routes.conDestino(
+                      Routes.registro,
+                      GoRouterState.of(context).uri.queryParameters['from'],
+                    )),
                     child: const Text('Registrate'),
                   ),
                 ],

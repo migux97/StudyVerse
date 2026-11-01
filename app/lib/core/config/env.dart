@@ -5,6 +5,11 @@ class Env {
   static const supabaseUrl = String.fromEnvironment('SUPABASE_URL');
   static const supabasePublishableKey = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
 
+  /// URL pública de la versión web; se usa para armar los links de invitación.
+  static const _webUrl = String.fromEnvironment('WEB_URL');
+  static String get webUrl =>
+      _webUrl.isNotEmpty ? _webUrl : (kIsWeb ? Uri.base.origin : 'http://localhost:3000');
+
   /// Deep link al que vuelve el login con Google en Android.
   static const authRedirectMobile = 'io.tpdrive.app://login-callback';
 
