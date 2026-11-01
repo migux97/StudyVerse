@@ -23,6 +23,7 @@ class Routes {
 
   static String grupo(String id) => '/grupos/$id';
   static String miembros(String id) => '/grupos/$id/miembros';
+  static String carpeta(String grupoId, String carpetaId) => '/grupos/$grupoId/carpetas/$carpetaId';
   static String unirse(String codigo) => '/unirse/$codigo';
 
   static const publicas = {login, registro, recuperar};
@@ -73,6 +74,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'miembros',
             builder: (_, s) => MembersScreen(groupId: s.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: 'carpetas/:folderId',
+            // Sin animación entre carpetas, como un explorador.
+            pageBuilder: (_, s) => NoTransitionPage(
+              child: GroupScreen(
+                groupId: s.pathParameters['id']!,
+                folderId: s.pathParameters['folderId'],
+              ),
+            ),
           ),
         ],
       ),

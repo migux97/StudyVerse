@@ -1,0 +1,36 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../auth/presentation/auth_providers.dart';
+import '../data/supabase_files_repository.dart';
+import '../domain/file_item.dart';
+import '../domain/files_repository.dart';
+
+final filesRepositoryProvider = Provider<FilesRepository>(
+  (ref) => SupabaseFilesRepository(ref.watch(supabaseClientProvider)),
+);
+
+/// Cambios en vivo de carpetas/archivos/versiones del grupo. Emite un
+/// contador porque Riverpod solo notifica si el valor cambia.
+final filesChangesProvider = StreamProvider.family<int, String>((ref, groupId) {
+  var n = 0;
+  return ref.watch(filesRepositoryProvider).changes(groupId).map((_) => ++n);
+});
+
+/// Todas las carpetas del grupo (para navegar y armar los breadcrumbs).
+final foldersProvider = FutureProvider.family<List<Folder>, String>((ref, groupId) {
+  ref.watch(filesChangesProvider(groupId));
+  return ref.watch(filesRepositoryProvider).folders(groupId);
+});
+
+/// Archivos de una carpeta (`folderId` null = raíz del grupo).
+final filesProvider =
+    FutureProvider.family<List<FileItem>, ({String groupId, String? folderId})>((ref, key) {
+  ref.watch(filesChangesProvider(key.groupId));
+  return ref.watch(filesRepositoryProvider).files(key.groupId, key.folderId);
+});
+
+final versionsProvider =
+    FutureProvider.family<List<FileVersion>, ({String groupId, String fileId})>((ref, key) {
+  ref.watch(filesChangesProvider(key.groupId));
+  return ref.watch(filesRepositoryProvider).versions(key.fileId);
+});
