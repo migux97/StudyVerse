@@ -9,10 +9,13 @@ import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/profile_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
+import '../../features/activity/presentation/activity_screen.dart';
 import '../../features/groups/presentation/group_screen.dart';
 import '../../features/groups/presentation/groups_screen.dart';
 import '../../features/groups/presentation/join_group_screen.dart';
 import '../../features/groups/presentation/members_screen.dart';
+import '../../features/tasks/presentation/contributions_screen.dart';
+import '../../features/tasks/presentation/tasks_screen.dart';
 
 class Routes {
   static const login = '/login';
@@ -24,6 +27,9 @@ class Routes {
   static String grupo(String id) => '/grupos/$id';
   static String miembros(String id) => '/grupos/$id/miembros';
   static String carpeta(String grupoId, String carpetaId) => '/grupos/$grupoId/carpetas/$carpetaId';
+  static String tareas(String id) => '/grupos/$id/tareas';
+  static String actividad(String id) => '/grupos/$id/actividad';
+  static String aportes(String id) => '/grupos/$id/aportes';
   static String unirse(String codigo) => '/unirse/$codigo';
 
   static const publicas = {login, registro, recuperar};
@@ -74,6 +80,20 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'miembros',
             builder: (_, s) => MembersScreen(groupId: s.pathParameters['id']!),
+          ),
+          // Secciones del grupo: sin animación al cambiar de pestaña.
+          GoRoute(
+            path: 'tareas',
+            pageBuilder: (_, s) => NoTransitionPage(child: TasksScreen(groupId: s.pathParameters['id']!)),
+          ),
+          GoRoute(
+            path: 'actividad',
+            pageBuilder: (_, s) => NoTransitionPage(child: ActivityScreen(groupId: s.pathParameters['id']!)),
+          ),
+          GoRoute(
+            path: 'aportes',
+            pageBuilder: (_, s) =>
+                NoTransitionPage(child: ContributionsScreen(groupId: s.pathParameters['id']!)),
           ),
           GoRoute(
             path: 'carpetas/:folderId',
