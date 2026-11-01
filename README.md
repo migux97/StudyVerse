@@ -79,6 +79,13 @@ Subir un archivo con el mismo nombre (sin importar mayúsculas) en la misma carp
 
 Límite por archivo: 50 MB.
 
+### Bloqueos ("Estoy editando este archivo")
+
+- `lock_file` bloquea el archivo; los demás ven "🔒 Ana está editando" en vivo (Realtime).
+- Mientras está bloqueado, solo quien lo bloqueó puede subir versiones, renombrar, restaurar o eliminar. Lo controla la base, no solo la UI.
+- Subir una versión nueva lo desbloquea solo. `unlock_file` lo libera a mano, o lo fuerza si sos admin del grupo.
+- Los bloqueos vencen a las 24 h (`lock_ttl()`): se ignoran al instante y un job de `pg_cron` (`liberar-bloqueos-vencidos`, cada 15 min) los limpia para que todos vean el cambio.
+
 ## Planes
 
 Los límites de cada plan están en la tabla `plan_limits` (free: 500 MB por grupo y últimas 3 versiones visibles). Se aplican en la base: la cuota en `begin_upload` y las versiones visibles en la política RLS de `file_versions`.
