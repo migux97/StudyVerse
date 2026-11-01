@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/web/ventana.dart';
 import '../../../core/widgets/auth_layout.dart';
 import '../../../core/widgets/confirm_dialog.dart';
 import '../../../core/widgets/text_input_dialog.dart';
@@ -94,17 +97,22 @@ Future<T?> _elegir<T>(BuildContext context, Future<T> Function() selector) async
   }
 }
 
+/// Un archivo del dispositivo, venga del selector o de arrastrar y soltar.
+typedef ArchivoLocal = ({String nombre, int? tamano, Future<Uint8List> Function() leer});
+
+ArchivoLocal _local(PlatformFile f) => (nombre: f.name, tamano: f.lengthSync(), leer: f.readAsBytes);
+
 Subida _subidaDe(
-  PlatformFile f, {
+  ArchivoLocal f, {
   String? nombre,
   String? fileId,
   String? versionDe,
   String? copiaPorque,
 }) =>
     Subida(
-      nombre: nombre ?? f.name,
-      tamano: f.lengthSync(),
-      leer: f.readAsBytes,
+      nombre: nombre ?? f.nombre,
+      tamano: f.tamano,
+      leer: f.leer,
       fileId: fileId,
       versionDe: versionDe,
       copiaPorque: copiaPorque,
@@ -121,8 +129,7 @@ Future<String> _miNombre(WidgetRef ref) async {
   }
 }
 
-/// Elige archivos y los sube a la carpeta. Los que ya existen (mismo nombre)
-/// quedan como versión nueva.
+/// Elige archivos y los sube a la carpeta (ver [subirArchivos]).
 Future<void> elegirYSubir(
   BuildContext context,
   WidgetRef ref, {
@@ -133,12 +140,31 @@ Future<void> elegirYSubir(
 }) async {
   final elegidos = await _elegir(context, () => FilePicker.pickFiles(dialogTitle: 'Elegí los archivos para subir'));
   if (elegidos == null || elegidos.isEmpty || !context.mounted) return;
+  await subirArchivos(context, ref,
+      groupId: groupId,
+      folderId: folderId,
+      existentes: existentes,
+      miId: miId,
+      archivos: elegidos.map(_local).toList());
+}
 
+/// Sube archivos a la carpeta, previa confirmación. Los que ya existen (mismo
+/// nombre) quedan como versión nueva; si otra persona edita el original, como copia.
+Future<void> subirArchivos(
+  BuildContext context,
+  WidgetRef ref, {
+  required String groupId,
+  required String? folderId,
+  required List<FileItem> existentes,
+  required String? miId,
+  required List<ArchivoLocal> archivos,
+}) async {
+  if (archivos.isEmpty) return;
   final ahora = DateTime.now();
   final yo = await _miNombre(ref);
   if (!context.mounted) return;
-  final subidas = elegidos.map((f) {
-    final existente = archivoConNombre(f.name, existentes);
+  final subidas = archivos.map((f) {
+    final existente = archivoConNombre(f.nombre, existentes);
     // Si otra persona lo está editando, no se espera: se sube como copia al lado.
     if (existente?.estadoBloqueo(miId, ahora) == EstadoBloqueo.deOtro) {
       return _subidaDe(
@@ -177,11 +203,11 @@ Future<void> subirNuevaVersion(
   if (!context.mounted) return;
   final subida = comoCopia
       ? _subidaDe(
-          elegido,
+          _local(elegido),
           nombre: nombreCopia(archivo.nombre, yo, existentes),
           copiaPorque: archivo.lockedByNombre ?? 'Otra persona',
         )
-      : _subidaDe(elegido, nombre: archivo.nombre, fileId: archivo.id, versionDe: archivo.nombre);
+      : _subidaDe(_local(elegido), nombre: archivo.nombre, fileId: archivo.id, versionDe: archivo.nombre);
   final nota = await confirmarSubida(context, [subida]);
   if (nota == null || !context.mounted) return;
 
@@ -306,20 +332,30 @@ Future<void> abrirVersion(
   FileVersion version,
   String nombre, {
   required bool descargar,
-}) =>
-    _intentar(context, () async {
+}) {
+  // Abrir en la web: la pestaña se abre YA, en el clic, y después se le pone
+  // la URL (si se abre después de esperar al servidor, Safari la bloquea).
+  final pestana = descargar ? null : VentanaPendiente.abrir();
+  return _intentar(context, () async {
+    try {
       final url = await ref
           .read(filesRepositoryProvider)
           .downloadUrl(version, nombre, descargar: descargar);
+      if (pestana != null) return pestana.ir(url);
       // Descargar: en la misma pestaña (el navegador baja el archivo sin salir
-      // de la app). Abrir: en una pestaña nueva.
+      // de la app). En Android: el navegador o la app que corresponda.
       final ok = await launchUrl(
         Uri.parse(url),
         mode: LaunchMode.externalApplication,
         webOnlyWindowName: descargar ? '_self' : '_blank',
       );
       if (!ok) throw const FilesFailure('No se pudo abrir el archivo');
-    });
+    } catch (_) {
+      pestana?.cerrar();
+      rethrow;
+    }
+  });
+}
 
 // Historial / renombrar / eliminar ------------------------------------------------
 

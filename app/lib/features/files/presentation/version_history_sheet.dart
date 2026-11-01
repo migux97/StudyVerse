@@ -9,10 +9,42 @@ import 'file_actions.dart';
 import 'file_icon.dart';
 import 'files_providers.dart';
 
-/// Historial de versiones: quién, cuándo, tamaño y nota. Descargar o restaurar.
-class VersionHistorySheet extends ConsumerWidget {
+/// Historial de versiones en una hoja inferior (celular o menú del archivo).
+class VersionHistorySheet extends StatelessWidget {
   const VersionHistorySheet({super.key, required this.archivo});
   final FileItem archivo;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ListTile(
+              leading: FileIcon(kind: archivo.kind),
+              title: Text(archivo.nombre, style: Theme.of(context).textTheme.titleMedium),
+              subtitle: const Text('Historial de versiones'),
+            ),
+            const Divider(height: 1),
+            Flexible(child: VersionList(archivo: archivo)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Lista de versiones: quién, cuándo, tamaño y nota. Descargar o restaurar.
+/// La usan la hoja de historial y el panel lateral en PC.
+class VersionList extends ConsumerWidget {
+  const VersionList({super.key, required this.archivo, this.compacta = false});
+  final FileItem archivo;
+
+  /// Para el panel lateral: menos padding.
+  final bool compacta;
 
   Future<void> _restaurar(BuildContext context, WidgetRef ref, FileVersion v) async {
     final ok = await confirmar(
@@ -39,58 +71,39 @@ class VersionHistorySheet extends ConsumerWidget {
     final versiones = ref.watch(versionsProvider((groupId: archivo.groupId, fileId: archivo.id)));
     final ahora = DateTime.now();
 
-    return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ListTile(
-              leading: FileIcon(kind: archivo.kind),
-              title: Text(archivo.nombre, style: theme.textTheme.titleMedium),
-              subtitle: const Text('Historial de versiones'),
+    return versiones.when(
+      skipLoadingOnReload: true,
+      loading: () => const Padding(
+        padding: EdgeInsets.all(32),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => Padding(padding: const EdgeInsets.all(24), child: Text(e.toString())),
+      data: (lista) => ListView(
+        shrinkWrap: true,
+        padding: const EdgeInsets.only(bottom: 16),
+        children: [
+          for (final v in lista)
+            _VersionTile(
+              version: v,
+              // La actual es siempre la más nueva (también al restaurar),
+              // y así se actualiza en vivo sin depender de [archivo].
+              esActual: v.id == lista.first.id,
+              ahora: ahora,
+              compacta: compacta,
+              onDescargar: () => abrirVersion(context, ref, v, archivo.nombre, descargar: true),
+              onRestaurar: () => _restaurar(context, ref, v),
             ),
-            const Divider(height: 1),
-            Flexible(
-              child: versiones.when(
-                skipLoadingOnReload: true,
-                loading: () => const Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-                error: (e, _) => Padding(padding: const EdgeInsets.all(24), child: Text(e.toString())),
-                data: (lista) => ListView(
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.only(bottom: 16),
-                  children: [
-                    for (final v in lista)
-                      _VersionTile(
-                        version: v,
-                        // La actual es siempre la más nueva (también al restaurar),
-                        // y así se actualiza en vivo sin depender de [archivo].
-                        esActual: v.id == lista.first.id,
-                        ahora: ahora,
-                        onDescargar: () => abrirVersion(context, ref, v, archivo.nombre, descargar: true),
-                        onRestaurar: () => _restaurar(context, ref, v),
-                      ),
-                    // El plan free muestra solo las últimas versiones.
-                    if (lista.isNotEmpty && lista.last.versionNumber > 1)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
-                        child: Text(
-                          'Con el plan gratis se ven las últimas ${lista.length} versiones. '
-                          'Las anteriores siguen guardadas.',
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                        ),
-                      ),
-                  ],
-                ),
+          // El plan free muestra solo las últimas versiones.
+          if (lista.isNotEmpty && lista.last.versionNumber > 1)
+            Padding(
+              padding: EdgeInsets.fromLTRB(compacta ? 16 : 24, 12, compacta ? 16 : 24, 0),
+              child: Text(
+                'Con el plan gratis se ven las últimas ${lista.length} versiones. '
+                'Las anteriores siguen guardadas.',
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -101,6 +114,7 @@ class _VersionTile extends StatelessWidget {
     required this.version,
     required this.esActual,
     required this.ahora,
+    required this.compacta,
     required this.onDescargar,
     required this.onRestaurar,
   });
@@ -108,6 +122,7 @@ class _VersionTile extends StatelessWidget {
   final FileVersion version;
   final bool esActual;
   final DateTime ahora;
+  final bool compacta;
   final VoidCallback onDescargar;
   final VoidCallback onRestaurar;
 
@@ -116,6 +131,8 @@ class _VersionTile extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     return ListTile(
+      contentPadding: compacta ? const EdgeInsets.symmetric(horizontal: 12) : null,
+      dense: compacta,
       leading: CircleAvatar(
         radius: 18,
         backgroundColor: esActual ? scheme.primaryContainer : scheme.surfaceContainerHighest,

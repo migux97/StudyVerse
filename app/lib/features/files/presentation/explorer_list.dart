@@ -15,6 +15,8 @@ class ExplorerList extends StatelessWidget {
     required this.miId,
     required this.soyAdmin,
     required this.onAbrirCarpeta,
+    this.seleccionadoId,
+    this.onSeleccionar,
   });
 
   final List<Folder> carpetas;
@@ -22,6 +24,10 @@ class ExplorerList extends StatelessWidget {
   final String? miId;
   final bool soyAdmin;
   final void Function(Folder) onAbrirCarpeta;
+
+  /// En PC con panel lateral: tocar un archivo lo elige en vez de abrirlo.
+  final String? seleccionadoId;
+  final void Function(FileItem)? onSeleccionar;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +50,8 @@ class ExplorerList extends StatelessWidget {
               yaLoPedi: a.pedidoPor(miId),
               soyAdmin: soyAdmin,
               puedeEliminar: soyAdmin || a.createdBy == miId,
+              seleccionado: a.id == seleccionadoId,
+              onSeleccionar: onSeleccionar == null ? null : () => onSeleccionar!(a),
             ),
         ],
       );
@@ -132,9 +140,13 @@ class _ArchivoTile extends ConsumerWidget {
     required this.yaLoPedi,
     required this.soyAdmin,
     required this.puedeEliminar,
+    required this.seleccionado,
+    required this.onSeleccionar,
   });
 
   final FileItem archivo;
+  final bool seleccionado;
+  final VoidCallback? onSeleccionar;
 
   /// Los demás archivos de la carpeta (para elegir un nombre de copia libre).
   final List<FileItem> hermanos;
@@ -285,7 +297,10 @@ class _ArchivoTile extends ConsumerWidget {
             ])
           : nombre,
       subtitle: ancho ? null : Text('$autor · $fecha · ${formatBytes(v.sizeBytes)}'),
-      onTap: () => _accion(context, ref, _AccionArchivo.abrir),
+      selected: seleccionado,
+      selectedTileColor: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
+      // Con panel lateral, tocar elige (el panel tiene "Abrir"); sin panel, abre.
+      onTap: onSeleccionar ?? () => _accion(context, ref, _AccionArchivo.abrir),
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
         if (ancho)
           IconButton(
