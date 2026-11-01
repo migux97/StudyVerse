@@ -9,12 +9,10 @@
 supabase/.temp/
 supabase/.branches/
 
-# Editores / SO
+# Editores / SO / herramientas locales
 .idea/
 .vscode/
+.claude/
 *.iml
 .DS_Store
 Thumbs.db
-
-# Configuración local de Claude Code
-.claude/
