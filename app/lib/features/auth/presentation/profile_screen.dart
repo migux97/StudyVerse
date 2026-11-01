@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
+import '../../../core/theme/theme_mode.dart';
 import '../../../core/widgets/auth_layout.dart';
 import '../domain/profile.dart';
 import '../domain/validators.dart';
@@ -16,7 +19,13 @@ class ProfileScreen extends ConsumerWidget {
     final email = ref.watch(authStateProvider).value?.email;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Mi perfil')),
+      appBar: AppBar(
+        // Si se entró directo por URL no hay a dónde volver: va a "Mis grupos".
+        leading: BackButton(
+          onPressed: () => context.canPop() ? context.pop() : context.go(Routes.grupos),
+        ),
+        title: const Text('Mi perfil'),
+      ),
       body: perfil.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, _) => const Center(child: Text('No se pudo cargar tu perfil')),
@@ -55,6 +64,8 @@ class ProfileScreen extends ConsumerWidget {
                           ),
                         ]),
                       ),
+                      const SizedBox(height: 16),
+                      const _Tema(),
                       const SizedBox(height: 24),
                       OutlinedButton.icon(
                         icon: const Icon(Icons.logout),
@@ -79,6 +90,36 @@ class ProfileScreen extends ConsumerWidget {
     if (context.mounted && ref.read(currentProfileProvider).hasError) {
       mostrarMensaje(context, 'No se pudo guardar el nombre', error: true);
     }
+  }
+}
+
+class _Tema extends ConsumerWidget {
+  const _Tema();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final modo = ref.watch(themeModeProvider);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Apariencia', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<ThemeMode>(
+              segments: const [
+                ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.brightness_auto_outlined), label: Text('Sistema')),
+                ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode_outlined), label: Text('Claro')),
+                ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode_outlined), label: Text('Oscuro')),
+              ],
+              selected: {modo},
+              onSelectionChanged: (s) => ref.read(themeModeProvider.notifier).elegir(s.single),
+            ),
+          ),
+        ]),
+      ),
+    );
   }
 }
 

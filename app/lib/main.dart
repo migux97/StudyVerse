@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'core/config/env.dart';
 import 'core/errors.dart';
+import 'core/theme/theme_mode.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +25,18 @@ Future<void> main() async {
     publishableKey: Env.supabasePublishableKey,
   );
 
-  runApp(const ProviderScope(retry: reintentoProviders, child: TpDriveApp()));
+  SharedPreferences? prefs;
+  try {
+    prefs = await SharedPreferences.getInstance();
+  } catch (_) {
+    // Navegación privada u otro bloqueo: se sigue sin preferencias guardadas.
+  }
+
+  runApp(ProviderScope(
+    retry: reintentoProviders,
+    overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+    child: const TpDriveApp(),
+  ));
 }
 
 class _ConfigFaltante extends StatelessWidget {

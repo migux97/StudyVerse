@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_mode.dart';
 import 'features/files/domain/file_item.dart';
 import 'features/files/domain/files_repository.dart';
 import 'features/files/presentation/files_providers.dart';
@@ -27,7 +28,7 @@ class TpDriveApp extends ConsumerWidget {
       scaffoldMessengerKey: scaffoldMessengerKey,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
+      themeMode: ref.watch(themeModeProvider),
       locale: const Locale('es', 'AR'),
       supportedLocales: const [Locale('es', 'AR'), Locale('es')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
