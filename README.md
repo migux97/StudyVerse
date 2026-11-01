@@ -81,10 +81,15 @@ Límite por archivo: 50 MB.
 
 ### Bloqueos ("Estoy editando este archivo")
 
-- `lock_file` bloquea el archivo; los demás ven "🔒 Ana está editando" en vivo (Realtime).
-- Mientras está bloqueado, solo quien lo bloqueó puede subir versiones, renombrar, restaurar o eliminar. Lo controla la base, no solo la UI.
-- Subir una versión nueva lo desbloquea solo. `unlock_file` lo libera a mano, o lo fuerza si sos admin del grupo.
-- Los bloqueos vencen a las 24 h (`lock_ttl()`): se ignoran al instante y un job de `pg_cron` (`liberar-bloqueos-vencidos`, cada 15 min) los limpia para que todos vean el cambio.
+El bloqueo avisa y protege, pero nadie tiene que quedarse esperando:
+
+- `lock_file(file, minutos)` bloquea el archivo por el tiempo elegido: 2 h (por defecto), hasta la noche o 24 h, como máximo. Se puede renovar. Los demás ven "🔒 Ana está editando" en vivo.
+- Mientras está bloqueado, solo quien lo bloqueó puede subir versiones, renombrar, restaurar o eliminar el original. Lo controla la base.
+- Los demás tienen dos opciones:
+  - **Subir sus cambios como copia** (`Informe (copia de Juan).docx`), al lado del original y sin pisarlo.
+  - **Pedirle que lo libere** (`request_unlock`): a quien lo tiene le llega un aviso en cualquier pantalla, con un botón "Liberar".
+- Subir una versión nueva lo desbloquea solo. `unlock_file` lo libera a mano, o lo fuerza si sos admin del grupo. Al liberarlo se borran los pedidos.
+- Al vencer (`lock_until`) se ignora al instante, y un job de `pg_cron` (`liberar-bloqueos-vencidos`, cada 15 min) lo limpia para que todos vean el cambio.
 
 ## Planes
 
