@@ -3,6 +3,7 @@
 // secreto interno: nadie de afuera puede dispararla.
 
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { esLlamadaInterna } from "../_shared/interno.ts";
 import { componerMensaje, type Envio } from "../_shared/mensajes.ts";
 import { enviarMensaje, TelegramError } from "../_shared/telegram.ts";
 
@@ -14,10 +15,7 @@ const supabase = createClient(
 const MAX_RONDAS = 5;
 
 Deno.serve(async (req) => {
-  const secreto = Deno.env.get("TELEGRAM_INTERNAL_SECRET");
-  if (!secreto || req.headers.get("x-internal-secret") !== secreto) {
-    return new Response("No autorizado", { status: 401 });
-  }
+  if (!esLlamadaInterna(req)) return new Response("No autorizado", { status: 401 });
 
   let enviados = 0;
   let fallidos = 0;

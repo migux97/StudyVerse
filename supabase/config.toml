@@ -396,12 +396,16 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
-# Bot de Telegram. Sin JWT: el webhook valida el secreto que manda Telegram y
-# telegram-send valida un secreto interno (los dos en supabase/functions/.env).
+# Funciones sin JWT: el webhook valida el secreto que manda Telegram; las
+# internas (telegram-send, storage-cleanup) validan INTERNAL_FUNCTIONS_SECRET.
+# Todo en supabase/functions/.env.
 [functions.telegram-webhook]
 verify_jwt = false
 
 [functions.telegram-send]
+verify_jwt = false
+
+[functions.storage-cleanup]
 verify_jwt = false
 
 [analytics]
