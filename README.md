@@ -65,6 +65,20 @@ Nunca se suben claves al repo: `.env` está en `.gitignore`; solo se versionan l
 | `app/.env` | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | Cliente Flutter |
 | `supabase/.env` | `SUPABASE_AUTH_EXTERNAL_GOOGLE_*` | Login con Google |
 
+## Archivos y versiones
+
+Los archivos van a Supabase Storage (bucket privado `archivos`), nunca a la base. Cada versión es un objeto en `groups/{group_id}/files/{file_id}/v{n}`.
+
+Subir un archivo son tres pasos:
+
+1. `begin_upload` valida que seas del grupo, que el archivo no lo esté editando otra persona y que haya espacio; devuelve la ruta.
+2. La app sube los bytes a Storage en esa ruta.
+3. `finish_upload` verifica que el objeto exista, toma el tamaño real desde Storage y registra la versión.
+
+Subir un archivo con el mismo nombre (sin importar mayúsculas) en la misma carpeta crea una versión nueva. Restaurar una versión crea otra nueva que reutiliza el objeto viejo, así que no ocupa espacio extra. `groups.storage_used` se mantiene con triggers.
+
+Límite por archivo: 50 MB.
+
 ## Planes
 
-Los límites de cada plan están en la tabla `plan_limits` (free: 500 MB por grupo y últimas 3 versiones visibles).
+Los límites de cada plan están en la tabla `plan_limits` (free: 500 MB por grupo y últimas 3 versiones visibles). Se aplican en la base: la cuota en `begin_upload` y las versiones visibles en la política RLS de `file_versions`.
