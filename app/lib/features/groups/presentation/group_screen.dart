@@ -122,7 +122,7 @@ class _Explorador extends ConsumerWidget {
                       hijasDe(folderId, todas).isEmpty && lista.isEmpty
                           ? _CarpetaVacia(
                               onSubir: () => elegirYSubir(context, ref,
-                                  groupId: grupo.id, folderId: folderId, existentes: lista),
+                                  groupId: grupo.id, folderId: folderId, existentes: lista, miId: miId),
                               onCarpeta: () => nuevaCarpeta(context, ref, grupo.id, folderId),
                             )
                           : RefreshIndicator(
@@ -160,7 +160,11 @@ class _Explorador extends ConsumerWidget {
             title: const Text('Subir archivos'),
             onTap: () {
               Navigator.pop(ctx);
-              elegirYSubir(context, ref, groupId: grupo.id, folderId: folderId, existentes: existentes);
+              elegirYSubir(context, ref,
+                  groupId: grupo.id,
+                  folderId: folderId,
+                  existentes: existentes,
+                  miId: ref.read(authStateProvider).value?.id);
             },
           ),
           ListTile(

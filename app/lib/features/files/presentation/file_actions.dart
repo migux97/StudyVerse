@@ -93,12 +93,20 @@ Future<T?> _elegir<T>(BuildContext context, Future<T> Function() selector) async
   }
 }
 
-Subida _subidaDe(PlatformFile f, {String? nombre, String? fileId, String? versionDe}) => Subida(
+Subida _subidaDe(
+  PlatformFile f, {
+  String? nombre,
+  String? fileId,
+  String? versionDe,
+  String? bloqueadoPor,
+}) =>
+    Subida(
       nombre: nombre ?? f.name,
       tamano: f.lengthSync(),
       leer: f.readAsBytes,
       fileId: fileId,
       versionDe: versionDe,
+      bloqueadoPor: bloqueadoPor,
     );
 
 /// Elige archivos y los sube a la carpeta. Los que ya existen (mismo nombre)
@@ -109,21 +117,28 @@ Future<void> elegirYSubir(
   required String groupId,
   required String? folderId,
   required List<FileItem> existentes,
+  required String? miId,
 }) async {
   final elegidos = await _elegir(context, () => FilePicker.pickFiles(dialogTitle: 'Elegí los archivos para subir'));
   if (elegidos == null || elegidos.isEmpty || !context.mounted) return;
 
-  final subidas = [
-    for (final f in elegidos)
-      _subidaDe(f, versionDe: archivoConNombre(f.name, existentes)?.nombre),
-  ];
+  final ahora = DateTime.now();
+  final subidas = elegidos.map((f) {
+    final existente = archivoConNombre(f.name, existentes);
+    final deOtro = existente?.estadoBloqueo(miId, ahora) == EstadoBloqueo.deOtro;
+    return _subidaDe(
+      f,
+      versionDe: existente?.nombre,
+      bloqueadoPor: deOtro ? (existente!.lockedByNombre ?? 'Otra persona') : null,
+    );
+  }).toList();
   final nota = await confirmarSubida(context, subidas);
   if (nota == null || !context.mounted) return;
 
   await ref.read(uploadsProvider.notifier).subir(
         groupId: groupId,
         folderId: folderId,
-        subidas: subidas.where((s) => (s.tamano ?? 0) <= maxBytesPorArchivo).toList(),
+        subidas: subidas.where((s) => s.impedimento == null).toList(),
         nota: nota.isEmpty ? null : nota,
       );
 }
@@ -141,9 +156,58 @@ Future<void> subirNuevaVersion(BuildContext context, WidgetRef ref, FileItem arc
   await ref.read(uploadsProvider.notifier).subir(
         groupId: archivo.groupId,
         folderId: archivo.folderId,
-        subidas: [if ((subida.tamano ?? 0) <= maxBytesPorArchivo) subida],
+        subidas: [if (subida.impedimento == null) subida],
         nota: nota.isEmpty ? null : nota,
       );
+}
+
+// Bloqueos -------------------------------------------------------------------------
+
+/// "Estoy editando este archivo": lo bloquea y ofrece descargar la versión actual.
+Future<void> bloquearArchivo(BuildContext context, WidgetRef ref, FileItem archivo) async {
+  final ok = await _intentar(context, () async {
+    await ref.read(filesRepositoryProvider).lock(archivo.id);
+    ref.invalidate(filesProvider((groupId: archivo.groupId, folderId: archivo.folderId)));
+  });
+  if (!ok || !context.mounted) return;
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 8),
+      content: const Text(
+        'Listo: el grupo ve que lo estás editando. Se desbloquea solo cuando '
+        'subís la versión nueva (o a las 24 h).',
+      ),
+      action: SnackBarAction(
+        label: 'Descargar',
+        onPressed: () => abrirVersion(context, ref, archivo.current!, archivo.nombre, descargar: true),
+      ),
+    ));
+}
+
+/// Desbloquear el propio, o forzar uno ajeno (admin).
+Future<void> desbloquearArchivo(
+  BuildContext context,
+  WidgetRef ref,
+  FileItem archivo, {
+  required bool forzar,
+}) async {
+  if (forzar) {
+    final ok = await confirmar(
+      context,
+      titulo: '¿Forzar el desbloqueo?',
+      mensaje: '${archivo.lockedByNombre ?? 'Otra persona'} está editando "${archivo.nombre}". '
+          'Si lo desbloqueás, otros van a poder subir versiones y podría perder sus cambios.',
+      accion: 'Desbloquear',
+      peligroso: true,
+    );
+    if (!ok || !context.mounted) return;
+  }
+  await _intentar(context, () async {
+    await ref.read(filesRepositoryProvider).unlock(archivo.id);
+    ref.invalidate(filesProvider((groupId: archivo.groupId, folderId: archivo.folderId)));
+  });
 }
 
 // Abrir / descargar ---------------------------------------------------------------

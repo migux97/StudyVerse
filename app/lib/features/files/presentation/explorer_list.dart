@@ -39,6 +39,8 @@ class ExplorerList extends StatelessWidget {
               archivo: a,
               ancho: ancho,
               ahora: ahora,
+              bloqueo: a.estadoBloqueo(miId, ahora),
+              soyAdmin: soyAdmin,
               puedeEliminar: soyAdmin || a.createdBy == miId,
             ),
         ],
@@ -103,19 +105,33 @@ class _CarpetaTile extends ConsumerWidget {
   }
 }
 
-enum _AccionArchivo { abrir, descargar, nuevaVersion, historial, renombrar, eliminar }
+enum _AccionArchivo {
+  abrir,
+  descargar,
+  bloquear,
+  desbloquear,
+  forzarDesbloqueo,
+  nuevaVersion,
+  historial,
+  renombrar,
+  eliminar,
+}
 
 class _ArchivoTile extends ConsumerWidget {
   const _ArchivoTile({
     required this.archivo,
     required this.ancho,
     required this.ahora,
+    required this.bloqueo,
+    required this.soyAdmin,
     required this.puedeEliminar,
   });
 
   final FileItem archivo;
   final bool ancho;
   final DateTime ahora;
+  final EstadoBloqueo bloqueo;
+  final bool soyAdmin;
   final bool puedeEliminar;
 
   void _accion(BuildContext context, WidgetRef ref, _AccionArchivo a) {
@@ -125,6 +141,12 @@ class _ArchivoTile extends ConsumerWidget {
         abrirVersion(context, ref, v, archivo.nombre, descargar: false);
       case _AccionArchivo.descargar:
         abrirVersion(context, ref, v, archivo.nombre, descargar: true);
+      case _AccionArchivo.bloquear:
+        bloquearArchivo(context, ref, archivo);
+      case _AccionArchivo.desbloquear:
+        desbloquearArchivo(context, ref, archivo, forzar: false);
+      case _AccionArchivo.forzarDesbloqueo:
+        desbloquearArchivo(context, ref, archivo, forzar: true);
       case _AccionArchivo.nuevaVersion:
         subirNuevaVersion(context, ref, archivo);
       case _AccionArchivo.historial:
@@ -144,38 +166,45 @@ class _ArchivoTile extends ConsumerWidget {
     final fecha = formatearFecha(v.createdAt, ahora);
     final secundario = theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant);
 
+    // Mientras otra persona lo edita, solo se puede abrir, descargar y ver el historial.
+    final libreParaMi = bloqueo != EstadoBloqueo.deOtro;
+    final editor = archivo.lockedByNombre ?? 'Otra persona';
+    PopupMenuItem<_AccionArchivo> item(_AccionArchivo valor, IconData icono, String texto,
+            {bool habilitado = true}) =>
+        PopupMenuItem(
+          value: valor,
+          enabled: habilitado,
+          child: ListTile(
+            enabled: habilitado,
+            leading: Icon(icono),
+            title: Text(texto),
+            subtitle: habilitado ? null : Text('$editor lo está editando'),
+          ),
+        );
+
     final menu = PopupMenuButton<_AccionArchivo>(
       tooltip: 'Opciones',
       onSelected: (a) => _accion(context, ref, a),
       itemBuilder: (_) => [
-        const PopupMenuItem(
-          value: _AccionArchivo.abrir,
-          child: ListTile(leading: Icon(Icons.open_in_new), title: Text('Abrir')),
-        ),
-        const PopupMenuItem(
-          value: _AccionArchivo.descargar,
-          child: ListTile(leading: Icon(Icons.download_rounded), title: Text('Descargar')),
-        ),
-        const PopupMenuItem(
-          value: _AccionArchivo.nuevaVersion,
-          child: ListTile(leading: Icon(Icons.upload_rounded), title: Text('Subir nueva versión')),
-        ),
-        PopupMenuItem(
-          value: _AccionArchivo.historial,
-          child: ListTile(
-            leading: const Icon(Icons.history_rounded),
-            title: Text('Historial (v${v.versionNumber})'),
-          ),
-        ),
-        const PopupMenuItem(
-          value: _AccionArchivo.renombrar,
-          child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Cambiar nombre')),
-        ),
+        item(_AccionArchivo.abrir, Icons.open_in_new, 'Abrir'),
+        item(_AccionArchivo.descargar, Icons.download_rounded, 'Descargar'),
+        const PopupMenuDivider(),
+        switch (bloqueo) {
+          EstadoBloqueo.libre =>
+            item(_AccionArchivo.bloquear, Icons.lock_outline, 'Estoy editando este archivo'),
+          EstadoBloqueo.mio =>
+            item(_AccionArchivo.desbloquear, Icons.lock_open_outlined, 'Ya terminé: desbloquear'),
+          EstadoBloqueo.deOtro => soyAdmin
+              ? item(_AccionArchivo.forzarDesbloqueo, Icons.lock_open_outlined, 'Forzar desbloqueo')
+              : item(_AccionArchivo.bloquear, Icons.lock_outline, 'Estoy editando este archivo',
+                  habilitado: false),
+        },
+        item(_AccionArchivo.nuevaVersion, Icons.upload_rounded, 'Subir nueva versión',
+            habilitado: libreParaMi),
+        item(_AccionArchivo.historial, Icons.history_rounded, 'Historial (v${v.versionNumber})'),
+        item(_AccionArchivo.renombrar, Icons.edit_outlined, 'Cambiar nombre', habilitado: libreParaMi),
         if (puedeEliminar)
-          const PopupMenuItem(
-            value: _AccionArchivo.eliminar,
-            child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Eliminar')),
-          ),
+          item(_AccionArchivo.eliminar, Icons.delete_outline, 'Eliminar', habilitado: libreParaMi),
       ],
     );
 
@@ -183,11 +212,21 @@ class _ArchivoTile extends ConsumerWidget {
       Flexible(child: Text(archivo.nombre, maxLines: 1, overflow: TextOverflow.ellipsis)),
       const SizedBox(width: 8),
       _VersionChip(numero: v.versionNumber),
+      if (bloqueo != EstadoBloqueo.libre) ...[
+        const SizedBox(width: 8),
+        Flexible(
+          child: _ChipBloqueo(
+            texto: bloqueo == EstadoBloqueo.mio ? 'Lo estás editando' : '$editor está editando',
+            detalle: formatearVencimiento(archivo.vencimientoBloqueo(ahora)!),
+            mio: bloqueo == EstadoBloqueo.mio,
+          ),
+        ),
+      ],
     ]);
 
     return ListTile(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      leading: FileIcon(kind: archivo.kind),
+      leading: _IconoConCandado(kind: archivo.kind, bloqueado: bloqueo != EstadoBloqueo.libre),
       title: ancho
           ? Row(children: [
               Expanded(flex: 5, child: nombre),
@@ -210,6 +249,58 @@ class _ArchivoTile extends ConsumerWidget {
           ),
         menu,
       ]),
+    );
+  }
+}
+
+class _IconoConCandado extends StatelessWidget {
+  const _IconoConCandado({required this.kind, required this.bloqueado});
+  final FileKind kind;
+  final bool bloqueado;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!bloqueado) return FileIcon(kind: kind);
+    final scheme = Theme.of(context).colorScheme;
+    return Stack(clipBehavior: Clip.none, children: [
+      FileIcon(kind: kind),
+      Positioned(
+        right: -4,
+        bottom: -4,
+        child: Container(
+          padding: const EdgeInsets.all(2),
+          decoration: BoxDecoration(color: scheme.surface, shape: BoxShape.circle),
+          child: Icon(Icons.lock, size: 12, color: scheme.tertiary),
+        ),
+      ),
+    ]);
+  }
+}
+
+/// "🔒 Ana está editando", con el vencimiento en el tooltip.
+class _ChipBloqueo extends StatelessWidget {
+  const _ChipBloqueo({required this.texto, required this.detalle, required this.mio});
+  final String texto;
+  final String detalle;
+  final bool mio;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final fondo = mio ? scheme.primaryContainer : scheme.tertiaryContainer;
+    final frente = mio ? scheme.onPrimaryContainer : scheme.onTertiaryContainer;
+    return Tooltip(
+      message: 'Bloqueado: $detalle',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(color: fondo, borderRadius: BorderRadius.circular(8)),
+        child: Text(
+          '🔒 $texto',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(fontSize: 12, color: frente),
+        ),
+      ),
     );
   }
 }

@@ -89,11 +89,20 @@ class FileItem {
 
   FileKind get kind => fileKindFor(nombre);
 
-  /// Bloqueo vigente (los bloqueos vencen a las 24 h).
+  /// Bloqueo vigente (los bloqueos vencen a las 24 h, como `lock_ttl()` en la base).
   bool estaBloqueado(DateTime ahora) =>
       lockedBy != null &&
       lockedAt != null &&
-      ahora.difference(lockedAt!) < const Duration(hours: 24);
+      ahora.difference(lockedAt!) < duracionBloqueo;
+
+  EstadoBloqueo estadoBloqueo(String? miId, DateTime ahora) {
+    if (!estaBloqueado(ahora)) return EstadoBloqueo.libre;
+    return lockedBy == miId ? EstadoBloqueo.mio : EstadoBloqueo.deOtro;
+  }
+
+  /// Cuánto le queda al bloqueo antes de vencer.
+  Duration? vencimientoBloqueo(DateTime ahora) =>
+      estaBloqueado(ahora) ? lockedAt!.add(duracionBloqueo).difference(ahora) : null;
 
   /// Fila de `files`, con `current:file_versions(...)` y `locker:profiles(nombre)`.
   factory FileItem.fromMap(Map<String, dynamic> map) {
@@ -112,6 +121,10 @@ class FileItem {
     );
   }
 }
+
+const duracionBloqueo = Duration(hours: 24);
+
+enum EstadoBloqueo { libre, mio, deOtro }
 
 enum FileKind { pdf, documento, planilla, presentacion, imagen, video, audio, comprimido, codigo, texto, otro }
 
@@ -155,6 +168,12 @@ String formatBytes(int bytes) {
       ? valor.round().toString()
       : valor.toStringAsFixed(1).replaceAll('.', ',');
   return '$texto ${unidades[i]}';
+}
+
+/// "se libera en 23 h" / "se libera en 40 min".
+String formatearVencimiento(Duration resta) {
+  if (resta.inMinutes < 60) return 'se libera en ${resta.inMinutes < 1 ? 1 : resta.inMinutes} min';
+  return 'se libera en ${resta.inHours} h';
 }
 
 const _meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];

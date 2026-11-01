@@ -1,7 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tpdrive/features/files/data/supabase_files_repository.dart';
 import 'package:tpdrive/features/files/domain/file_item.dart';
+import 'package:tpdrive/features/files/domain/files_repository.dart';
 import 'package:tpdrive/features/files/domain/folder_tree.dart';
+import 'package:tpdrive/features/files/presentation/uploads_controller.dart';
 
 Folder _carpeta(String id, String? padre, String nombre) => Folder(
       id: id,
@@ -98,6 +102,47 @@ void main() {
     expect(_archivo('a', lockedBy: 'u', lockedAt: ahora.subtract(const Duration(hours: 25)))
         .estaBloqueado(ahora), isFalse);
     expect(_archivo('a').estaBloqueado(ahora), isFalse);
+  });
+
+  group('estado del bloqueo', () {
+    final ahora = DateTime(2026, 11, 1, 12);
+    final deBeto = _archivo('a', lockedBy: 'beto', lockedAt: ahora.subtract(const Duration(hours: 2)));
+
+    test('libre, mío o de otro', () {
+      expect(_archivo('a').estadoBloqueo('ana', ahora), EstadoBloqueo.libre);
+      expect(deBeto.estadoBloqueo('beto', ahora), EstadoBloqueo.mio);
+      expect(deBeto.estadoBloqueo('ana', ahora), EstadoBloqueo.deOtro);
+    });
+
+    test('vencido cuenta como libre', () {
+      final viejo = _archivo('a', lockedBy: 'beto', lockedAt: ahora.subtract(const Duration(hours: 25)));
+      expect(viejo.estadoBloqueo('ana', ahora), EstadoBloqueo.libre);
+      expect(viejo.vencimientoBloqueo(ahora), isNull);
+    });
+
+    test('cuánto falta para que se libere', () {
+      expect(deBeto.vencimientoBloqueo(ahora), const Duration(hours: 22));
+      expect(formatearVencimiento(const Duration(hours: 22)), 'se libera en 22 h');
+      expect(formatearVencimiento(const Duration(minutes: 40)), 'se libera en 40 min');
+      expect(formatearVencimiento(const Duration(seconds: 10)), 'se libera en 1 min');
+    });
+  });
+
+  group('qué se puede subir', () {
+    Subida subida({int tamano = 100, String? bloqueadoPor}) => Subida(
+          nombre: 'x.pdf',
+          tamano: tamano,
+          leer: () async => Uint8List(0),
+          bloqueadoPor: bloqueadoPor,
+        );
+
+    test('se puede subir', () => expect(subida().impedimento, isNull));
+    test('no si lo edita otra persona', () {
+      expect(subida(bloqueadoPor: 'Ana').impedimento, 'Ana lo está editando');
+    });
+    test('no si supera el máximo', () {
+      expect(subida(tamano: maxBytesPorArchivo + 1).impedimento, contains('50 MB'));
+    });
   });
 
   test('errores en español', () {

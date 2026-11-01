@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../domain/file_item.dart';
-import '../domain/files_repository.dart';
 import 'file_icon.dart';
 import 'uploads_controller.dart';
 
@@ -27,12 +26,10 @@ class _SubidaDialogState extends State<_SubidaDialog> {
     super.dispose();
   }
 
-  bool _muyGrande(Subida s) => (s.tamano ?? 0) > maxBytesPorArchivo;
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final validas = widget.subidas.where((s) => !_muyGrande(s)).toList();
+    final validas = widget.subidas.where((s) => s.impedimento == null).toList();
     final hayVersiones = validas.any((s) => s.versionDe != null);
     final titulo = widget.subidas.length == 1
         ? (hayVersiones ? 'Subir nueva versión' : 'Subir archivo')
@@ -58,13 +55,13 @@ class _SubidaDialogState extends State<_SubidaDialog> {
                       leading: FileIcon(kind: fileKindFor(s.nombre), size: 24),
                       title: Text(s.nombre, maxLines: 1, overflow: TextOverflow.ellipsis),
                       subtitle: Text(
-                        _muyGrande(s)
-                            ? 'Supera el máximo de ${maxBytesPorArchivo ~/ 1024 ~/ 1024} MB: no se va a subir'
+                        s.impedimento != null
+                            ? '${s.impedimento}: no se va a subir'
                             : [
                                 if (s.tamano != null) formatBytes(s.tamano!),
                                 s.versionDe != null ? 'nueva versión' : 'archivo nuevo',
                               ].join(' · '),
-                        style: TextStyle(color: _muyGrande(s) ? theme.colorScheme.error : null),
+                        style: TextStyle(color: s.impedimento != null ? theme.colorScheme.error : null),
                       ),
                     ),
                 ],

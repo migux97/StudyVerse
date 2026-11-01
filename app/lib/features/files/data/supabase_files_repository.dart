@@ -119,6 +119,14 @@ class SupabaseFilesRepository implements FilesRepository {
           ));
 
   @override
+  Future<void> lock(String fileId) =>
+      _guard(() => _client.rpc('lock_file', params: {'p_file_id': fileId}));
+
+  @override
+  Future<void> unlock(String fileId) =>
+      _guard(() => _client.rpc('unlock_file', params: {'p_file_id': fileId}));
+
+  @override
   Future<FileVersion> restore(String versionId) => _guard(() async {
         final row =
             await _client.rpc('restore_version', params: {'p_version_id': versionId}).single();
