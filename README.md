@@ -1,19 +1,43 @@
 # TP Drive
 
-App para que estudiantes universitarios trabajen en grupo en sus TPs: carpetas por grupo, archivos con versiones, bloqueos, tareas y avisos por Telegram. Un solo código Flutter para **Android** y **Web**.
+App para que estudiantes universitarios trabajen en grupo en sus TPs, tan simple como Google Drive: entrás, ves las carpetas de tus grupos, subís archivos y listo. Un solo código Flutter para **Android** y **Web**, con Supabase como backend.
+
+## Qué hace
+
+- **Grupos.** Cada grupo es una carpeta. Se entra con un código o un link de invitación, sin email. Roles: admin (quien lo crea) y miembro.
+- **Archivos con versiones.** Subir un archivo con el mismo nombre crea la versión siguiente, no un duplicado. Cada versión guarda quién la subió, cuándo, el tamaño y una nota opcional. Restaurar una versión vieja crea una nueva y no borra nada.
+- **Bloqueos sin esperas.** "Estoy editando este archivo" avisa en vivo ("🔒 Ana está editando") y protege el original. Los demás pueden subir sus cambios como copia o pedirle que lo libere. El bloqueo vence solo y el admin puede forzar el desbloqueo.
+- **Tareas por TP.** Cada tarea tiene responsable, fecha límite y estado. La vista **Aportes** muestra cuántas tareas completó y cuántas versiones subió cada integrante.
+- **Actividad.** Un feed por grupo: "Juan subió la v3 de Informe.docx", "Ana completó la tarea…".
+- **Bot de Telegram.** Avisa las versiones nuevas, los bloqueos y las tareas completadas, y recuerda las fechas límite el día anterior.
+- **Interfaz.** Material 3, modo claro / oscuro / del sistema, todo en español.
+  - En el celular: lista de archivos y barra de secciones abajo.
+  - En la PC: columnas, riel lateral, panel de detalles y arrastrar y soltar archivos.
 
 ## Estructura
 
 ```
-app/        Flutter (Riverpod + go_router + Material 3)
-  lib/core/       config, router, tema, widgets comunes
-  lib/features/   auth, groups, files, tasks, activity (data / domain / presentation)
-supabase/   migraciones, seed, tests de base de datos (pgTAP), edge functions
+app/                      Flutter (Riverpod + go_router + Material 3)
+  lib/core/               config, router, tema, errores, widgets comunes
+  lib/features/
+    auth/                 login, registro, perfil
+    groups/               grupos, integrantes, invitaciones, navegación del grupo, Telegram
+    files/                carpetas, archivos, versiones, bloqueos, subidas
+    tasks/                tareas y aportes
+    activity/             feed de actividad
+                          (cada una con data / domain / presentation)
+  test/                   unit y widget tests
+supabase/
+  migrations/             esquema, RLS, funciones y triggers (en orden)
+  tests/database/         tests pgTAP (políticas RLS, triggers, funciones)
+  functions/              Edge Functions (TypeScript / Deno)
+  scripts/                configuración local de las funciones
+  seed.sql                usuarios de prueba (solo local)
 ```
 
 ## Requisitos
 
-- Flutter (stable) — `flutter --version`
+- Flutter (stable)
 - Docker Desktop (para Supabase local)
 - Node.js (se usa `npx supabase`, no hace falta instalar la CLI)
 - Android SDK (para compilar la app de Android)
@@ -25,7 +49,7 @@ supabase/   migraciones, seed, tests de base de datos (pgTAP), edge functions
 
 ```bash
 cp supabase/.env.example supabase/.env   # credenciales de Google (opcional)
-npx supabase start                       # levanta Postgres, Auth, Storage, Realtime
+npx supabase start                       # Postgres, Auth, Storage, Realtime, Edge Runtime
 npx supabase db reset                    # aplica migraciones + seed
 ```
 
@@ -44,9 +68,18 @@ flutter run -d emulator-5554 --dart-define-from-file=.env
 
 En el emulador de Android, `127.0.0.1` se traduce solo a `10.0.2.2`.
 
+### 3. Edge Functions (bot de Telegram y limpieza de Storage)
+
+```bash
+./supabase/scripts/configurar-funciones-local.ps1 -BotToken "TOKEN_DE_BOTFATHER"
+npx supabase functions serve --env-file supabase/functions/.env
+```
+
+El script crea `supabase/functions/.env` con secretos aleatorios y los registra en Vault, para que la base pueda llamar a las funciones. Para probar sin Telegram, pasá `-ApiBase` con la URL de un Telegram simulado.
+
 ### Login con Google
 
-1. En Google Cloud Console crear un ID de cliente OAuth **Web** con la URI de redirección `http://127.0.0.1:54321/auth/v1/callback`.
+1. En Google Cloud Console, crear un ID de cliente OAuth **Web** con la URI de redirección `http://127.0.0.1:54321/auth/v1/callback`.
 2. Completar `supabase/.env` con el client id y el secret, y reiniciar (`npx supabase stop && npx supabase start`).
 3. Android vuelve a la app por el deep link `io.tpdrive.app://login-callback`.
 
@@ -54,21 +87,33 @@ En el emulador de Android, `127.0.0.1` se traduce solo a `10.0.2.2`.
 
 ```bash
 cd app && flutter test                   # unit y widget tests
-npx supabase test db                     # políticas RLS y triggers (pgTAP)
+npx supabase test db                     # políticas RLS, triggers y funciones (pgTAP)
 deno test supabase/functions/_shared     # textos y comandos del bot
 ```
 
 ## Variables de entorno
 
-Nunca se suben claves al repo: `.env` está en `.gitignore`; solo se versionan los `.env.example`.
+Nunca se suben claves al repo: los `.env` están en `.gitignore` y solo se versionan los `.env.example`.
 
 | Archivo | Variable | Uso |
 |---|---|---|
 | `app/.env` | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | Cliente Flutter |
+| `app/.env` | `WEB_URL` | Links de invitación copiados desde Android |
+| `app/.env` | `TELEGRAM_BOT_USERNAME` | Botón "Abrir en Telegram" |
 | `supabase/.env` | `SUPABASE_AUTH_EXTERNAL_GOOGLE_*` | Login con Google |
-| `supabase/functions/.env` | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_INTERNAL_SECRET` | Bot de Telegram |
+| `supabase/functions/.env` | `INTERNAL_FUNCTIONS_SECRET` | Protege las funciones que llama la base |
+| `supabase/functions/.env` | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET` | Bot de Telegram |
 
-## Archivos y versiones
+## Seguridad
+
+- **Row Level Security en todas las tablas:** cada usuario solo ve y modifica los datos de sus grupos.
+- **Operaciones sensibles en funciones de la base:** crear o unirse a un grupo, subir versiones, bloquear, eliminar. Esas funciones validan permisos; el cliente no puede escribir directo en esas tablas.
+- **Storage:** bucket privado y políticas por grupo según la ruta `groups/{group_id}/…`. Las descargas usan URLs firmadas de 60 segundos.
+- **Edge Functions:** el webhook valida el `secret_token` de Telegram, y las funciones internas un secreto compartido guardado en Vault.
+
+## Cómo funciona
+
+### Archivos y versiones
 
 Los archivos van a Supabase Storage (bucket privado `archivos`), nunca a la base. Cada versión es un objeto en `groups/{group_id}/files/{file_id}/v{n}`.
 
@@ -78,76 +123,77 @@ Subir un archivo son tres pasos:
 2. La app sube los bytes a Storage en esa ruta.
 3. `finish_upload` verifica que el objeto exista, toma el tamaño real desde Storage y registra la versión.
 
-Subir un archivo con el mismo nombre (sin importar mayúsculas) en la misma carpeta crea una versión nueva. Restaurar una versión crea otra nueva que reutiliza el objeto viejo, así que no ocupa espacio extra. `groups.storage_used` se mantiene con triggers.
+El mismo nombre (sin importar mayúsculas) en la misma carpeta crea una versión nueva. Restaurar reutiliza el objeto viejo, así que no ocupa espacio extra. `groups.storage_used` se mantiene con triggers. Límite por archivo: 50 MB.
 
-Límite por archivo: 50 MB.
+**Limpieza.** La Edge Function `storage-cleanup` borra una vez por día (`pg_cron`, 4:30) los objetos que ya no usa ninguna versión: los de grupos eliminados y los de subidas que se cortaron antes de terminar.
 
-### Bloqueos ("Estoy editando este archivo")
+### Bloqueos
 
-El bloqueo avisa y protege, pero nadie tiene que quedarse esperando:
+- **Bloquear:** `lock_file(file, minutos)` bloquea por el tiempo elegido: 2 h (por defecto), hasta la noche o 24 h como máximo. Se puede renovar.
+- **Qué protege:** mientras está bloqueado, solo quien lo bloqueó puede subir versiones, renombrar, restaurar o eliminar el original. Lo controla la base.
+- **Qué pueden hacer los demás:** subir sus cambios como copia (`Informe (copia de Juan).docx`) o pedirle que lo libere (`request_unlock`). A quien lo tiene le llega el aviso en cualquier pantalla, con un botón "Liberar".
+- **Desbloquear:** subir una versión nueva lo desbloquea solo. `unlock_file` lo libera a mano, o lo fuerza si sos admin del grupo.
+- **Vencimiento:** al vencer (`lock_until`) el bloqueo se ignora al instante, y un job de `pg_cron` (cada 15 min) lo limpia para que todos vean el cambio en vivo.
 
-- `lock_file(file, minutos)` bloquea el archivo por el tiempo elegido: 2 h (por defecto), hasta la noche o 24 h, como máximo. Se puede renovar. Los demás ven "🔒 Ana está editando" en vivo.
-- Mientras está bloqueado, solo quien lo bloqueó puede subir versiones, renombrar, restaurar o eliminar el original. Lo controla la base.
-- Los demás tienen dos opciones:
-  - **Subir sus cambios como copia** (`Informe (copia de Juan).docx`), al lado del original y sin pisarlo.
-  - **Pedirle que lo libere** (`request_unlock`): a quien lo tiene le llega un aviso en cualquier pantalla, con un botón "Liberar".
-- Subir una versión nueva lo desbloquea solo. `unlock_file` lo libera a mano, o lo fuerza si sos admin del grupo. Al liberarlo se borran los pedidos.
-- Al vencer (`lock_until`) se ignora al instante, y un job de `pg_cron` (`liberar-bloqueos-vencidos`, cada 15 min) lo limpia para que todos vean el cambio.
+### Tareas, actividad y aportes
 
-## Tareas, actividad y aportes
-
-- **Tareas** (`tasks`): título, responsable (tiene que ser del grupo), fecha límite, estado (pendiente / en progreso / hecha) y TP opcional (una carpeta de primer nivel). `completed_at` lo maneja un trigger.
-- **Actividad** (`activity`): la escriben solo los triggers. Registran versiones subidas o restauradas, bloqueos, renombres, bajas, carpetas, altas y bajas de integrantes, tareas y pedidos de liberación. El payload guarda los nombres, así el feed se sigue leyendo bien aunque después se renombre o borre algo. Es la fuente que va a usar el bot de Telegram.
+- **Tareas** (`tasks`): el responsable tiene que ser del grupo; `completed_at` lo maneja un trigger.
+- **Actividad** (`activity`): la escriben solo los triggers: versiones, bloqueos, renombres, bajas, carpetas, integrantes, tareas, pedidos de liberación. El payload guarda los nombres, así el feed se lee bien aunque después se renombre o borre algo.
 - **Aportes** (`group_contributions`): tareas completadas y versiones subidas por integrante. Cuenta también las versiones que el plan free no muestra.
 
-## Bot de Telegram
+### Bot de Telegram
 
-Avisa en un grupo de Telegram cuando alguien sube una versión, empieza o termina de editar un archivo, pide uno que está bloqueado o completa una tarea. También recuerda las fechas límite el día anterior, a las 10 (hora de Argentina). Comandos: `/vincular CODIGO`, `/pendientes`, `/desvincular`, `/ayuda`.
+Comandos: `/vincular CODIGO`, `/pendientes`, `/desvincular`, `/ayuda`.
 
-**Cómo funciona**
+- **Vincular:** en la app, el admin abre *Avisos por Telegram* y genera un código de un solo uso que vence a los 30 minutos. En el grupo de Telegram se manda `/vincular CODIGO`. No se usa el código de invitación: quien lo tuviera podría escuchar los avisos.
+- **Avisos:** cada evento de actividad que interesa se encola en `telegram_outbox` (uno por chat vinculado). `telegram-send` arma el mensaje y lo envía. La base la despierta al instante con `pg_net`, y `pg_cron` reintenta cada minuto lo pendiente (hasta 5 intentos). Si echan al bot de un chat, ese chat se desvincula solo.
+- **Recordatorios:** el día anterior a cada fecha límite, a las 10 (hora de Argentina).
 
-- **Vincular.** En la app, el admin abre *Avisos por Telegram* y genera un código de un solo uso que vence a los 30 minutos. En el grupo de Telegram se manda `/vincular CODIGO`. No se usa el código de invitación: quien lo tuviera podría escuchar los avisos.
-- **Avisos.** Cada evento de `activity` que interesa se encola en `telegram_outbox` (uno por chat). La Edge Function `telegram-send` arma el mensaje y lo envía. La base la despierta al instante con `pg_net`, y `pg_cron` reintenta cada minuto lo pendiente (hasta 5 intentos). Si echan al bot de un chat, ese chat se desvincula solo.
-- **Edge Functions** (`supabase/functions`):
-  - `telegram-webhook`: recibe los mensajes y valida el `secret_token` de Telegram.
-  - `telegram-send`: envía lo encolado y valida un secreto interno.
-  - `_shared/mensajes.ts`: los textos.
+**Crear el bot** (una vez): en Telegram, hablale a [@BotFather](https://t.me/BotFather) → `/newbot`. Te da el **token** y el **usuario**; el usuario (sin @) va en `app/.env` → `TELEGRAM_BOT_USERNAME`. Telegram necesita una URL pública para el webhook: en local se puede usar un túnel (por ejemplo `cloudflared tunnel --url http://localhost:54321`).
 
-**Crear el bot** (una vez)
+## Despliegue
 
-1. En Telegram, hablale a [@BotFather](https://t.me/BotFather) → `/newbot`. Te da el **token** y el **usuario** del bot.
-2. Poné el usuario (sin @) en `app/.env` → `TELEGRAM_BOT_USERNAME`.
-
-**Local**
+**Supabase** (proyecto en supabase.com):
 
 ```bash
-./supabase/scripts/configurar-telegram-local.ps1 -BotToken "TOKEN_DE_BOTFATHER"
-npx supabase functions serve --env-file supabase/functions/.env
-```
-
-El script crea `supabase/functions/.env` con secretos aleatorios y los registra en Vault. Telegram necesita una URL pública para el webhook: localmente se puede usar un túnel (por ejemplo `cloudflared tunnel --url http://localhost:54321`). Para probar sin Telegram, pasá `-ApiBase` con la URL de un servidor simulado.
-
-**Producción** (proyecto en supabase.com)
-
-```bash
+npx supabase link --project-ref <proyecto>
+npx supabase db push                                  # migraciones
 npx supabase secrets set --env-file supabase/functions/.env
 npx supabase functions deploy telegram-webhook --no-verify-jwt
 npx supabase functions deploy telegram-send --no-verify-jwt
+npx supabase functions deploy storage-cleanup --no-verify-jwt
 ```
 
-En el SQL Editor del proyecto, guardá en Vault la URL de `telegram-send` y el mismo `TELEGRAM_INTERNAL_SECRET`:
+En el SQL Editor, guardá en Vault la URL base de las funciones y el mismo `INTERNAL_FUNCTIONS_SECRET`:
 
 ```sql
-select vault.create_secret('https://<proyecto>.supabase.co/functions/v1/telegram-send', 'telegram_send_url');
-select vault.create_secret('<TELEGRAM_INTERNAL_SECRET>', 'telegram_internal_secret');
+select vault.create_secret('https://<proyecto>.supabase.co/functions/v1', 'functions_base_url');
+select vault.create_secret('<INTERNAL_FUNCTIONS_SECRET>', 'internal_functions_secret');
 ```
 
-Y registrá el webhook (con el `TELEGRAM_WEBHOOK_SECRET`):
+Registrá el webhook del bot:
 
 ```bash
 curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<proyecto>.supabase.co/functions/v1/telegram-webhook&secret_token=<TELEGRAM_WEBHOOK_SECRET>"
 ```
 
-## Planes
+En Auth → URL Configuration, agregá la URL de la web y `io.tpdrive.app://login-callback`.
 
-Los límites de cada plan están en la tabla `plan_limits` (free: 500 MB por grupo y últimas 3 versiones visibles). Se aplican en la base: la cuota en `begin_upload` y las versiones visibles en la política RLS de `file_versions`.
+**Web:** `flutter build web --dart-define-from-file=.env` genera `app/build/web`, para cualquier hosting estático.
+
+**Android:** `flutter build apk --dart-define-from-file=.env` (o `appbundle` para Play Store).
+
+## Preparado para el futuro
+
+La estructura está lista, pero esto no está implementado:
+
+- **Plan premium por grupo:** `groups.plan` y `profiles.plan`, con los límites en la tabla `plan_limits` (free: 500 MB y las últimas 3 versiones visibles; premium: más espacio, historial completo y reporte de aportes en PDF). Los límites se aplican en la base. En *Aportes* ya está el lugar del reporte PDF.
+- **Mercado Pago:** el plan solo lo puede cambiar el backend (los clientes no tienen permiso de `UPDATE` sobre `plan`), listo para un webhook de pagos.
+- **GitHub y WhatsApp:** la tabla `activity` y la cola de avisos sirven de base para otros canales, igual que Telegram.
+
+## Limitaciones conocidas
+
+- **Tamaño de archivo:** máximo 50 MB, y el archivo se lee entero en memoria antes de subirlo.
+- **Arrastrar y soltar en la web:** se sueltan archivos, no carpetas.
+- **Android:** compila y arranca, pero no está probado de punta a punta en un dispositivo.
+- **Login con Google:** necesita credenciales propias de Google Cloud.
