@@ -17,6 +17,7 @@ supabase/   migraciones, seed, tests de base de datos (pgTAP), edge functions
 - Docker Desktop (para Supabase local)
 - Node.js (se usa `npx supabase`, no hace falta instalar la CLI)
 - Android SDK (para compilar la app de Android)
+- Deno (solo para los tests de las Edge Functions)
 
 ## Cómo correrlo
 
@@ -54,6 +55,7 @@ En el emulador de Android, `127.0.0.1` se traduce solo a `10.0.2.2`.
 ```bash
 cd app && flutter test                   # unit y widget tests
 npx supabase test db                     # políticas RLS y triggers (pgTAP)
+deno test supabase/functions/_shared     # textos y comandos del bot
 ```
 
 ## Variables de entorno
@@ -64,6 +66,7 @@ Nunca se suben claves al repo: `.env` está en `.gitignore`; solo se versionan l
 |---|---|---|
 | `app/.env` | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | Cliente Flutter |
 | `supabase/.env` | `SUPABASE_AUTH_EXTERNAL_GOOGLE_*` | Login con Google |
+| `supabase/functions/.env` | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_INTERNAL_SECRET` | Bot de Telegram |
 
 ## Archivos y versiones
 
@@ -96,6 +99,54 @@ El bloqueo avisa y protege, pero nadie tiene que quedarse esperando:
 - **Tareas** (`tasks`): título, responsable (tiene que ser del grupo), fecha límite, estado (pendiente / en progreso / hecha) y TP opcional (una carpeta de primer nivel). `completed_at` lo maneja un trigger.
 - **Actividad** (`activity`): la escriben solo los triggers. Registran versiones subidas o restauradas, bloqueos, renombres, bajas, carpetas, altas y bajas de integrantes, tareas y pedidos de liberación. El payload guarda los nombres, así el feed se sigue leyendo bien aunque después se renombre o borre algo. Es la fuente que va a usar el bot de Telegram.
 - **Aportes** (`group_contributions`): tareas completadas y versiones subidas por integrante. Cuenta también las versiones que el plan free no muestra.
+
+## Bot de Telegram
+
+Avisa en un grupo de Telegram cuando alguien sube una versión, empieza o termina de editar un archivo, pide uno que está bloqueado o completa una tarea. También recuerda las fechas límite el día anterior, a las 10 (hora de Argentina). Comandos: `/vincular CODIGO`, `/pendientes`, `/desvincular`, `/ayuda`.
+
+**Cómo funciona**
+
+- **Vincular.** En la app, el admin abre *Avisos por Telegram* y genera un código de un solo uso que vence a los 30 minutos. En el grupo de Telegram se manda `/vincular CODIGO`. No se usa el código de invitación: quien lo tuviera podría escuchar los avisos.
+- **Avisos.** Cada evento de `activity` que interesa se encola en `telegram_outbox` (uno por chat). La Edge Function `telegram-send` arma el mensaje y lo envía. La base la despierta al instante con `pg_net`, y `pg_cron` reintenta cada minuto lo pendiente (hasta 5 intentos). Si echan al bot de un chat, ese chat se desvincula solo.
+- **Edge Functions** (`supabase/functions`):
+  - `telegram-webhook`: recibe los mensajes y valida el `secret_token` de Telegram.
+  - `telegram-send`: envía lo encolado y valida un secreto interno.
+  - `_shared/mensajes.ts`: los textos.
+
+**Crear el bot** (una vez)
+
+1. En Telegram, hablale a [@BotFather](https://t.me/BotFather) → `/newbot`. Te da el **token** y el **usuario** del bot.
+2. Poné el usuario (sin @) en `app/.env` → `TELEGRAM_BOT_USERNAME`.
+
+**Local**
+
+```bash
+./supabase/scripts/configurar-telegram-local.ps1 -BotToken "TOKEN_DE_BOTFATHER"
+npx supabase functions serve --env-file supabase/functions/.env
+```
+
+El script crea `supabase/functions/.env` con secretos aleatorios y los registra en Vault. Telegram necesita una URL pública para el webhook: localmente se puede usar un túnel (por ejemplo `cloudflared tunnel --url http://localhost:54321`). Para probar sin Telegram, pasá `-ApiBase` con la URL de un servidor simulado.
+
+**Producción** (proyecto en supabase.com)
+
+```bash
+npx supabase secrets set --env-file supabase/functions/.env
+npx supabase functions deploy telegram-webhook --no-verify-jwt
+npx supabase functions deploy telegram-send --no-verify-jwt
+```
+
+En el SQL Editor del proyecto, guardá en Vault la URL de `telegram-send` y el mismo `TELEGRAM_INTERNAL_SECRET`:
+
+```sql
+select vault.create_secret('https://<proyecto>.supabase.co/functions/v1/telegram-send', 'telegram_send_url');
+select vault.create_secret('<TELEGRAM_INTERNAL_SECRET>', 'telegram_internal_secret');
+```
+
+Y registrá el webhook (con el `TELEGRAM_WEBHOOK_SECRET`):
+
+```bash
+curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<proyecto>.supabase.co/functions/v1/telegram-webhook&secret_token=<TELEGRAM_WEBHOOK_SECRET>"
+```
 
 ## Planes
 
