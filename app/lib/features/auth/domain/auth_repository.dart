@@ -1,3 +1,4 @@
+import '../../../core/errors.dart';
 import 'profile.dart';
 
 /// Usuario autenticado, independiente del SDK de Supabase.
@@ -8,11 +9,8 @@ class SessionUser {
 }
 
 /// Error de autenticación con un mensaje listo para mostrar.
-class AuthFailure implements Exception {
-  const AuthFailure(this.mensaje);
-  final String mensaje;
-  @override
-  String toString() => mensaje;
+class AuthFailure extends AppFailure {
+  const AuthFailure(super.mensaje);
 }
 
 abstract interface class AuthRepository {

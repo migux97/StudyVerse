@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'core/config/env.dart';
+import 'core/errors.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // En la web, que la URL refleje también las pantallas abiertas con push
+  // (así recargar no te devuelve al inicio).
+  GoRouter.optionURLReflectsImperativeAPIs = true;
 
   if (!Env.isConfigured) {
     runApp(const _ConfigFaltante());
@@ -18,7 +23,7 @@ Future<void> main() async {
     publishableKey: Env.supabasePublishableKey,
   );
 
-  runApp(const ProviderScope(child: TpDriveApp()));
+  runApp(const ProviderScope(retry: reintentoProviders, child: TpDriveApp()));
 }
 
 class _ConfigFaltante extends StatelessWidget {
