@@ -91,6 +91,12 @@ El bloqueo avisa y protege, pero nadie tiene que quedarse esperando:
 - Subir una versión nueva lo desbloquea solo. `unlock_file` lo libera a mano, o lo fuerza si sos admin del grupo. Al liberarlo se borran los pedidos.
 - Al vencer (`lock_until`) se ignora al instante, y un job de `pg_cron` (`liberar-bloqueos-vencidos`, cada 15 min) lo limpia para que todos vean el cambio.
 
+## Tareas, actividad y aportes
+
+- **Tareas** (`tasks`): título, responsable (tiene que ser del grupo), fecha límite, estado (pendiente / en progreso / hecha) y TP opcional (una carpeta de primer nivel). `completed_at` lo maneja un trigger.
+- **Actividad** (`activity`): la escriben solo los triggers. Registran versiones subidas o restauradas, bloqueos, renombres, bajas, carpetas, altas y bajas de integrantes, tareas y pedidos de liberación. El payload guarda los nombres, así el feed se sigue leyendo bien aunque después se renombre o borre algo. Es la fuente que va a usar el bot de Telegram.
+- **Aportes** (`group_contributions`): tareas completadas y versiones subidas por integrante. Cuenta también las versiones que el plan free no muestra.
+
 ## Planes
 
 Los límites de cada plan están en la tabla `plan_limits` (free: 500 MB por grupo y últimas 3 versiones visibles). Se aplican en la base: la cuota en `begin_upload` y las versiones visibles en la política RLS de `file_versions`.
