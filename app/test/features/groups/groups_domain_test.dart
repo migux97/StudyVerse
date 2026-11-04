@@ -16,11 +16,14 @@ void main() {
     test('normaliza y formatea', () {
       expect(Invite.normalizar(' abcd-2345 '), 'ABCD2345');
       expect(Invite.formatear('abcd2345'), 'ABCD-2345');
+      expect(Invite.formatear('abcde23456'), 'ABCDE-23456');
     });
 
     test('valida el alfabeto sin caracteres ambiguos', () {
       expect(Invite.esCodigoValido('ABCD2345'), isTrue);
       expect(Invite.esCodigoValido('ABCD-2345'), isTrue);
+      expect(Invite.esCodigoValido('ABCDE-23456'), isTrue, reason: 'los nuevos tienen 10');
+      expect(Invite.esCodigoValido('ABCDE2345'), isFalse, reason: '9 no es un largo válido');
       expect(Invite.esCodigoValido('ABCD234'), isFalse, reason: 'muy corto');
       expect(Invite.esCodigoValido('ABCD0345'), isFalse, reason: 'el 0 no se usa');
       expect(Invite.esCodigoValido('OBCD2345'), isFalse, reason: 'la O no se usa');
@@ -34,6 +37,7 @@ void main() {
     test('extrae el código de un link o de un código suelto', () {
       expect(Invite.extraerCodigo('http://localhost:3000/#/unirse/ABCD2345'), 'ABCD2345');
       expect(Invite.extraerCodigo('abcd-2345'), 'ABCD2345');
+      expect(Invite.extraerCodigo('http://localhost:3000/#/unirse/ABCDE23456'), 'ABCDE23456');
       expect(Invite.extraerCodigo('hola'), isNull);
     });
   });

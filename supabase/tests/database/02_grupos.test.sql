@@ -37,8 +37,8 @@ grant select on g to authenticated;
 
 select is((select rol::text from public.group_members where user_id = auth.uid()), 'admin',
   'quien crea el grupo queda como admin');
-select matches((select invite_code from g), '^[A-HJKMNP-Z2-9]{8}$',
-  'el código tiene 8 caracteres sin ambiguos');
+select matches((select invite_code from g), '^[A-HJKMNP-Z2-9]{10}$',
+  'el código tiene 10 caracteres sin ambiguos');
 select throws_ok($$ insert into public.groups (nombre, invite_code) values ('x', 'XXXXXXXX') $$,
   '42501', null, 'no se puede insertar un grupo directo, solo con create_group');
 

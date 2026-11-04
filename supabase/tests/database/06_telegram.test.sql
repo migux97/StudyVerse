@@ -35,7 +35,7 @@ select throws_ok(format($$ select * from public.create_telegram_link_code(%L) $$
 select pg_temp.como('00000000-0000-0000-0000-00000000000a');
 create temp table c on commit drop as select * from public.create_telegram_link_code((select id from g));
 grant select on c to authenticated;
-select matches((select code from c), '^[A-HJKMNP-Z2-9]{8}$', 'el admin genera un código de 8 caracteres');
+select matches((select code from c), '^[A-HJKMNP-Z2-9]{10}$', 'el admin genera un código de 10 caracteres');
 select ok((select expires_at between now() + interval '29 minutes' and now() + interval '31 minutes' from c),
   'vence en 30 minutos');
 select is((select count(*)::int from public.telegram_link_codes), 0, 'los clientes no pueden leer los códigos');
