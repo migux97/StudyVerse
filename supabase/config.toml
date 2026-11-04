@@ -2,7 +2,7 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
-project_id = "tpdrive"
+project_id = "studyverse"
 
 [api]
 enabled = true
@@ -161,9 +161,9 @@ site_url = "http://localhost:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["http://localhost:3000", "http://127.0.0.1:3000", "io.tpdrive.app://login-callback"]
+additional_redirect_urls = ["http://localhost:3000", "http://127.0.0.1:3000", "io.studyverse.app://login-callback"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
-jwt_expiry = 3600
+jwt_expiry = 900
 # JWT issuer URL. If not set, defaults to auth.external_url.
 # jwt_issuer = ""
 # Path to JWT signing key. DO NOT commit your signing keys file to git.
@@ -178,12 +178,12 @@ enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
 enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
-enable_manual_linking = false
+enable_manual_linking = true
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
-minimum_password_length = 6
+minimum_password_length = 8
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
-password_requirements = ""
+password_requirements = "lower_upper_letters_digits"
 
 # Configure passkey sign-ins.
 # [auth.passkey]
@@ -197,7 +197,7 @@ password_requirements = ""
 
 [auth.rate_limit]
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-email_sent = 2
+email_sent = 30
 # Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
 sms_sent = 30
 # Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
@@ -224,15 +224,15 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
-secure_password_change = false
+secure_password_change = true
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
-max_frequency = "1s"
+max_frequency = "30s"
 # Number of characters used in the email OTP.
 otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
-otp_expiry = 3600
+otp_expiry = 900
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]
@@ -244,16 +244,28 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
-# Uncomment to customize email template
-# [auth.email.template.invite]
-# subject = "You have been invited"
-# content_path = "./supabase/templates/invite.html"
+# Correos de StudyVerse: todos mandan un código de 6 dígitos (sirve igual en
+# la web y en la app, sin depender de links).
+[auth.email.template.confirmation]
+subject = "Tu código para StudyVerse: {{ .Token }}"
+content_path = "./supabase/templates/confirmacion.html"
 
-# Uncomment to customize notification email template
-# [auth.email.notification.password_changed]
-# enabled = true
-# subject = "Your password has been changed"
-# content_path = "./supabase/templates/password_changed_notification.html"
+[auth.email.template.magic_link]
+subject = "Tu código para entrar a StudyVerse: {{ .Token }}"
+content_path = "./supabase/templates/codigo.html"
+
+[auth.email.template.recovery]
+subject = "Cambiá tu contraseña de StudyVerse"
+content_path = "./supabase/templates/recuperar.html"
+
+[auth.email.template.email_change]
+subject = "Confirmá tu nuevo email en StudyVerse"
+content_path = "./supabase/templates/cambio_email.html"
+
+[auth.email.notification.password_changed]
+enabled = true
+subject = "Se cambió la contraseña de tu cuenta de StudyVerse"
+content_path = "./supabase/templates/contrasena_cambiada.html"
 
 [auth.sms]
 # Allow/disallow new user signups via SMS to your project.
@@ -270,7 +282,10 @@ max_frequency = "5s"
 # [auth.sms.test_otp]
 # 14152127777 = "123456"
 
-# Configure logged in session timeouts.
+# Sesiones como en Drive: sin vencimiento. Quedás conectado hasta cerrar sesión
+# (o cerrarla desde "Dispositivos conectados"). El access token dura 15 min
+# (jwt_expiry) y se renueva solo con el refresh token, que rota en cada uso: un
+# dispositivo cerrado pierde el acceso en ese tiempo.
 # [auth.sessions]
 # Force log out after the specified duration.
 # timebox = "24h"
