@@ -92,7 +92,7 @@ Future<T?> _elegir<T>(BuildContext context, Future<T> Function() selector) async
   try {
     return await selector();
   } catch (e) {
-    if (context.mounted) mostrarMensaje(context, 'No se pudieron leer los archivos ($e)', error: true);
+    if (context.mounted) mostrarMensaje(context, 'No pudimos leer esos archivos', error: true);
     return null;
   }
 }
@@ -236,17 +236,11 @@ Future<void> bloquearArchivo(BuildContext context, WidgetRef ref, FileItem archi
   if (renovar) return mostrarMensaje(context, 'Listo, tenés más tiempo');
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 8),
-      content: const Text(
-        'Listo: el grupo ve que lo estás editando. Se desbloquea solo cuando '
-        'subís la versión nueva o cuando vence.',
-      ),
-      action: SnackBarAction(
-        label: 'Descargar',
-        onPressed: () => abrirVersion(context, ref, archivo.current!, archivo.nombre, descargar: true),
-      ),
+    ..showSnackBar(aviso(
+      context,
+      'El grupo ya ve que lo estás editando',
+      accion: 'Descargar',
+      alTocar: () => abrirVersion(context, ref, archivo.current!, archivo.nombre, descargar: true),
     ));
 }
 
@@ -296,7 +290,7 @@ Future<void> pedirLiberacion(BuildContext context, WidgetRef ref, FileItem archi
   });
   if (ok && context.mounted) {
     mostrarMensaje(context,
-        'Le avisamos a ${archivo.lockedByNombre ?? 'quien lo está editando'}. Mientras tanto podés subir tus cambios como copia.');
+        'Le avisamos a ${archivo.lockedByNombre ?? 'quien lo está editando'}');
   }
 }
 

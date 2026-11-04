@@ -128,5 +128,5 @@ String traducirErrorGrupo(String? code, String message) {
     case '23514':
       return 'Revisá los datos: el nombre no puede quedar vacío';
   }
-  return 'No se pudo completar la operación. Intentá de nuevo';
+  return 'Algo salió mal. Probá de nuevo';
 }

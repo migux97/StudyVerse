@@ -56,10 +56,10 @@ class VersionList extends ConsumerWidget {
     );
     if (!ok || !context.mounted) return;
     try {
-      final nueva = await ref.read(filesRepositoryProvider).restore(v.id);
+      await ref.read(filesRepositoryProvider).restore(v.id);
       ref.invalidate(versionsProvider((groupId: archivo.groupId, fileId: archivo.id)));
       ref.invalidate(filesProvider((groupId: archivo.groupId, folderId: archivo.folderId)));
-      if (context.mounted) mostrarMensaje(context, 'Listo: la v${nueva.versionNumber} es igual a la v${v.versionNumber}');
+      if (context.mounted) mostrarMensaje(context, 'Se restauró la v${v.versionNumber}');
     } on FilesFailure catch (e) {
       if (context.mounted) mostrarMensaje(context, e.mensaje, error: true);
     }

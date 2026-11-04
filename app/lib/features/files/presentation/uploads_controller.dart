@@ -74,7 +74,7 @@ class UploadsController extends Notifier<List<Subida>> {
         s.error = e.mensaje;
         _marcar(s, EstadoSubida.error);
       } catch (_) {
-        s.error = 'No se pudo subir. Intentá de nuevo';
+        s.error = 'No se pudo subir';
         _marcar(s, EstadoSubida.error);
       }
     }

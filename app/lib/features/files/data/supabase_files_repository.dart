@@ -215,7 +215,7 @@ String traducirErrorArchivos(String? code, String message) {
     case '23514':
       return 'El nombre no es válido';
   }
-  return 'No se pudo completar la operación. Intentá de nuevo';
+  return 'Algo salió mal. Probá de nuevo';
 }
 
 String traducirErrorStorage(String? statusCode, String message) {
@@ -227,5 +227,5 @@ String traducirErrorStorage(String? statusCode, String message) {
     case '409':
       return 'Ese archivo ya se estaba subiendo. Probá de nuevo';
   }
-  return 'No se pudo transferir el archivo. Revisá tu conexión e intentá de nuevo';
+  return 'Se cortó la conexión. Probá de nuevo';
 }

@@ -65,5 +65,5 @@ String traducirErrorTareas(String? code, String message) => switch (code) {
       'P0001' => message,
       '42501' => 'No tenés permiso para hacer esto',
       '23514' => 'El título no puede quedar vacío',
-      _ => 'No se pudo guardar la tarea. Intentá de nuevo',
+      _ => 'No se pudo guardar la tarea',
     };

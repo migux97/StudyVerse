@@ -49,7 +49,7 @@ class SupabaseTelegramRepository implements TelegramRepository {
       return await fn();
     } on PostgrestException catch (e) {
       throw TelegramFailure(
-        e.code == '42501' ? 'Solo el admin puede conectar Telegram' : 'No se pudo completar. Intentá de nuevo',
+        e.code == '42501' ? 'Solo el admin puede conectar Telegram' : 'Algo salió mal. Probá de nuevo',
       );
     }
   }
