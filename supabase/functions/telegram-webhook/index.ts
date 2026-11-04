@@ -2,7 +2,8 @@
 // Responde siempre 200 (si no, Telegram reintenta el mismo mensaje).
 
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { AYUDA, hoyEnArgentina, leerComando, listarPendientes } from "../_shared/mensajes.ts";
+import { AYUDA, escapar, hoyEnArgentina, leerComando, listarPendientes } from "../_shared/mensajes.ts";
+import { mismoSecreto } from "../_shared/interno.ts";
 import { enviarMensaje } from "../_shared/telegram.ts";
 
 const supabase = createClient(
@@ -12,8 +13,8 @@ const supabase = createClient(
 
 Deno.serve(async (req) => {
   // Telegram manda el secreto que se configuró con setWebhook(secret_token).
-  const secreto = Deno.env.get("TELEGRAM_WEBHOOK_SECRET");
-  if (!secreto || req.headers.get("x-telegram-bot-api-secret-token") !== secreto) {
+  const recibido = req.headers.get("x-telegram-bot-api-secret-token");
+  if (!(await mismoSecreto(recibido, Deno.env.get("TELEGRAM_WEBHOOK_SECRET")))) {
     return new Response("No autorizado", { status: 401 });
   }
 
@@ -49,7 +50,7 @@ async function responder(chat: { id: number; title?: string; first_name?: string
       if (error) {
         return "❌ Ese código no existe o ya venció. Generá uno nuevo en la app (<i>Conectar Telegram</i>).";
       }
-      return `✅ Listo: este chat va a recibir los avisos de <b>${grupo.nombre}</b>.\nUsá /pendientes para ver las tareas.`;
+      return `✅ Listo: este chat va a recibir los avisos de <b>${escapar(grupo.nombre)}</b>.\nUsá /pendientes para ver las tareas.`;
     }
 
     case "desvincular": {
@@ -62,7 +63,7 @@ async function responder(chat: { id: number; title?: string; first_name?: string
       if (!data?.length) return "Este chat no estaba conectado a ningún grupo.";
       // Sin tipos generados, supabase-js infiere la relación como array; es un objeto.
       const vinculos = data as unknown as { groups: { nombre: string } }[];
-      const nombres = vinculos.map((l) => l.groups.nombre).join(", ");
+      const nombres = vinculos.map((l) => escapar(l.groups.nombre)).join(", ");
       return `👋 Listo, no mando más avisos de ${nombres} a este chat.`;
     }
 

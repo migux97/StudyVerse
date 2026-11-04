@@ -15,7 +15,7 @@ const supabase = createClient(
 const MAX_RONDAS = 5;
 
 Deno.serve(async (req) => {
-  if (!esLlamadaInterna(req)) return new Response("No autorizado", { status: 401 });
+  if (!(await esLlamadaInterna(req))) return new Response("No autorizado", { status: 401 });
 
   let enviados = 0;
   let fallidos = 0;

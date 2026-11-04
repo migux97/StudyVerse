@@ -14,7 +14,7 @@ const supabase = createClient(
 const LOTE = 100;
 
 Deno.serve(async (req) => {
-  if (!esLlamadaInterna(req)) return new Response("No autorizado", { status: 401 });
+  if (!(await esLlamadaInterna(req))) return new Response("No autorizado", { status: 401 });
 
   const body = await req.json().catch(() => ({}));
   const horas = Number.isFinite(body?.edad_minima_horas) ? Math.max(0, body.edad_minima_horas) : 24;
