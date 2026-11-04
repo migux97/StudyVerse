@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tpdrive/features/files/domain/file_item.dart';
-import 'package:tpdrive/features/files/presentation/explorer_list.dart';
+import 'package:studyverse/features/files/domain/file_item.dart';
+import 'package:studyverse/features/files/presentation/explorer_list.dart';
 
 FileItem _archivo(String nombre, {int version = 1, String? lockedBy, String? lockedByNombre}) {
   final ahora = DateTime.now();

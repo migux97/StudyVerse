@@ -12,7 +12,7 @@
 param(
   [string]$BotToken = "",
   [string]$ApiBase = "",
-  [string]$Contenedor = "supabase_db_tpdrive"
+  [string]$Contenedor = "supabase_db_studyverse"
 )
 
 $ErrorActionPreference = "Stop"

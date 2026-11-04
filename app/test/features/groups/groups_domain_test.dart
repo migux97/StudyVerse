@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tpdrive/features/groups/data/supabase_groups_repository.dart';
-import 'package:tpdrive/features/groups/domain/group.dart';
-import 'package:tpdrive/features/groups/domain/invite.dart';
+import 'package:studyverse/features/groups/data/supabase_groups_repository.dart';
+import 'package:studyverse/features/groups/domain/group.dart';
+import 'package:studyverse/features/groups/domain/invite.dart';
 
 Map<String, dynamic> _perfil(String id, String nombre) => {
       'id': id,
@@ -30,8 +30,8 @@ void main() {
     });
 
     test('arma el link de invitación', () {
-      expect(Invite.link('https://tpdrive.app/', 'abcd-2345'),
-          'https://tpdrive.app/#/unirse/ABCD2345');
+      expect(Invite.link('https://studyverse.app/', 'abcd-2345'),
+          'https://studyverse.app/#/unirse/ABCD2345');
     });
 
     test('extrae el código de un link o de un código suelto', () {

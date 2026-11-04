@@ -1,11 +1,11 @@
 {
-    "name": "tpdrive",
-    "short_name": "tpdrive",
+    "name": "StudyVerse",
+    "short_name": "StudyVerse",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "Trabajo en equipo para TPs",
+    "background_color": "#FFFFFF",
+    "theme_color": "#1C8AD4",
+    "description": "Archivos, tareas y entregas de tus grupos de estudio",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

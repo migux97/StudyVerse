@@ -1,11 +1,11 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tpdrive/features/files/data/supabase_files_repository.dart';
-import 'package:tpdrive/features/files/domain/file_item.dart';
-import 'package:tpdrive/features/files/domain/files_repository.dart';
-import 'package:tpdrive/features/files/domain/folder_tree.dart';
-import 'package:tpdrive/features/files/presentation/uploads_controller.dart';
+import 'package:studyverse/features/files/data/supabase_files_repository.dart';
+import 'package:studyverse/features/files/domain/file_item.dart';
+import 'package:studyverse/features/files/domain/files_repository.dart';
+import 'package:studyverse/features/files/domain/folder_tree.dart';
+import 'package:studyverse/features/files/presentation/uploads_controller.dart';
 
 Folder _carpeta(String id, String? padre, String nombre) => Folder(
       id: id,

@@ -35,7 +35,7 @@ Future<void> main() async {
   runApp(ProviderScope(
     retry: reintentoProviders,
     overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
-    child: const TpDriveApp(),
+    child: const StudyVerseApp(),
   ));
 }
 

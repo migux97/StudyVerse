@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tpdrive/features/tasks/domain/task.dart';
+import 'package:studyverse/features/tasks/domain/task.dart';
 
 Task _tarea({
   String titulo = 't',

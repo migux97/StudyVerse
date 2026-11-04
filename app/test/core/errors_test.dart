@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tpdrive/core/errors.dart';
-import 'package:tpdrive/features/groups/domain/groups_repository.dart';
+import 'package:studyverse/core/errors.dart';
+import 'package:studyverse/features/groups/domain/groups_repository.dart';
 
 void main() {
   test('los errores de la app no se reintentan', () {

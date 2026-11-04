@@ -2,9 +2,9 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tpdrive/features/files/domain/files_repository.dart';
-import 'package:tpdrive/features/files/presentation/upload_dialog.dart';
-import 'package:tpdrive/features/files/presentation/uploads_controller.dart';
+import 'package:studyverse/features/files/domain/files_repository.dart';
+import 'package:studyverse/features/files/presentation/upload_dialog.dart';
+import 'package:studyverse/features/files/presentation/uploads_controller.dart';
 
 Subida _subida(String nombre, {int tamano = 1024, String? versionDe, String? copiaPorque}) => Subida(
       nombre: nombre,

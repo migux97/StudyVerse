@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tpdrive/features/activity/domain/activity_item.dart';
+import 'package:studyverse/features/activity/domain/activity_item.dart';
 
 ActivityItem _evento(String tipo, Map<String, dynamic> payload, {String userId = 'juan'}) => ActivityItem(
       id: 'e',

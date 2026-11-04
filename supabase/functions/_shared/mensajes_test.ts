@@ -62,7 +62,7 @@ Deno.test("escapa el HTML que escriben los usuarios", () => {
 
 Deno.test("leer comandos", () => {
   assertEquals(leerComando("/vincular ABCD-2345"), { tipo: "vincular", codigo: "ABCD-2345" });
-  assertEquals(leerComando("/vincular@TPDriveBot abcd2345"), { tipo: "vincular", codigo: "abcd2345" });
+  assertEquals(leerComando("/vincular@StudyVerseBot abcd2345"), { tipo: "vincular", codigo: "abcd2345" });
   assertEquals(leerComando("/vincular"), { tipo: "vincular", codigo: null });
   assertEquals(leerComando("/start"), { tipo: "ayuda" });
   assertEquals(leerComando("/Pendientes"), { tipo: "pendientes" });

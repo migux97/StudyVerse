@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tpdrive/features/auth/domain/auth_repository.dart';
-import 'package:tpdrive/features/auth/domain/profile.dart';
-import 'package:tpdrive/features/auth/presentation/auth_providers.dart';
-import 'package:tpdrive/features/groups/domain/group.dart';
-import 'package:tpdrive/features/groups/presentation/groups_providers.dart';
-import 'package:tpdrive/features/groups/presentation/groups_screen.dart';
-import 'package:tpdrive/features/tasks/domain/task.dart';
-import 'package:tpdrive/features/tasks/presentation/tasks_providers.dart';
-import 'package:tpdrive/features/tasks/presentation/tasks_screen.dart';
+import 'package:studyverse/features/auth/domain/auth_repository.dart';
+import 'package:studyverse/features/auth/domain/profile.dart';
+import 'package:studyverse/features/auth/presentation/auth_providers.dart';
+import 'package:studyverse/features/groups/domain/group.dart';
+import 'package:studyverse/features/groups/presentation/groups_providers.dart';
+import 'package:studyverse/features/groups/presentation/groups_screen.dart';
+import 'package:studyverse/features/tasks/domain/task.dart';
+import 'package:studyverse/features/tasks/presentation/tasks_providers.dart';
+import 'package:studyverse/features/tasks/presentation/tasks_screen.dart';
 
 final _yo = Profile(id: 'ana', nombre: 'Ana López', createdAt: DateTime(2026));
 

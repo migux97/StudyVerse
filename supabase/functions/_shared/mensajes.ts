@@ -97,7 +97,7 @@ export type Comando =
 
 /**
  * Lee el comando de un mensaje. En los grupos Telegram agrega el nombre del
- * bot: "/vincular@TPDriveBot ABCD-2345".
+ * bot: "/vincular@StudyVerseBot ABCD-2345".
  */
 export function leerComando(texto: string | undefined): Comando {
   const match = /^\/([a-záéíóú]+)(?:@\w+)?(?:\s+(.+))?$/i.exec((texto ?? "").trim());
@@ -121,7 +121,7 @@ export function leerComando(texto: string | undefined): Comando {
 }
 
 export const AYUDA = [
-  "👋 Soy el bot de <b>TP Drive</b>. Aviso en este chat cuando alguien de tu grupo:",
+  "👋 Soy el bot de <b>StudyVerse</b>. Aviso en este chat cuando alguien de tu grupo:",
   "• sube una versión nueva de un archivo",
   "• empieza o termina de editar uno",
   "• completa una tarea",

@@ -1,4 +1,4 @@
-package io.tpdrive.tpdrive
+package io.studyverse.app
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -82,7 +82,7 @@ class _TelegramState extends ConsumerState<_Telegram> {
       final n = ahora.value?.length ?? 0;
       if (_codigo != null && n > (antes?.value?.length ?? 0)) {
         setState(() => _codigo = null);
-        mostrarMensaje(context, '¡Listo! Telegram quedó conectado');
+        mostrarMensaje(context, 'Telegram quedó conectado');
       }
     });
 
@@ -163,7 +163,7 @@ class _Pasos extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Conectar en 2 pasos', style: theme.textTheme.titleMedium),
           const SizedBox(height: 16),
-          Text('1. Agregá ${bot.isEmpty ? 'el bot de TP Drive' : '@$bot'} al grupo de Telegram del TP.'),
+          Text('1. Agregá ${bot.isEmpty ? 'el bot de StudyVerse' : '@$bot'} al grupo de Telegram del TP.'),
           if (bot.isNotEmpty) ...[
             const SizedBox(height: 8),
             OutlinedButton.icon(

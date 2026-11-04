@@ -1,10 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tpdrive/features/groups/domain/telegram.dart';
+import 'package:studyverse/features/groups/domain/telegram.dart';
 
 void main() {
   test('link para agregar el bot a un grupo', () {
-    expect(linkAgregarBot('@TPDriveBot'), 'https://t.me/TPDriveBot?startgroup=true');
-    expect(linkAgregarBot('TPDriveBot'), 'https://t.me/TPDriveBot?startgroup=true');
+    expect(linkAgregarBot('@StudyVerseBot'), 'https://t.me/StudyVerseBot?startgroup=true');
+    expect(linkAgregarBot('StudyVerseBot'), 'https://t.me/StudyVerseBot?startgroup=true');
   });
 
   test('chat vinculado desde la base (los ids de grupos son negativos y grandes)', () {

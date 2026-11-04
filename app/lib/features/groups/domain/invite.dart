@@ -19,7 +19,7 @@ class Invite {
     return '${c.substring(0, mitad)}-${c.substring(mitad)}';
   }
 
-  /// Link para compartir. `base` es el origen de la web, p. ej. https://tpdrive.app
+  /// Link para compartir. `base` es el origen de la web, p. ej. https://studyverse.app
   static String link(String base, String codigo) {
     final origen = base.endsWith('/') ? base.substring(0, base.length - 1) : base;
     return '$origen/#$rutaUnirse/${normalizar(codigo)}';
