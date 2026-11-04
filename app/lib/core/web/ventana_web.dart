@@ -7,7 +7,11 @@ class VentanaPendiente {
   /// Abre una pestaña vacía. Llamar sincrónicamente dentro del clic.
   static VentanaPendiente? abrir() {
     final w = web.window.open('', '_blank');
-    return w == null ? null : VentanaPendiente._(w);
+    if (w == null) return null;
+    // La pestaña va a mostrar un archivo subido por otro: que no pueda tocar
+    // esta (reverse tabnabbing). Se puede porque about:blank es del mismo origen.
+    w.opener = null;
+    return VentanaPendiente._(w);
   }
 
   void ir(String url) => _ventana.location.href = url;
