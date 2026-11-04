@@ -97,7 +97,7 @@ select is((select count(*)::int from public.files), 1, 'sigue habiendo un solo a
 
 select throws_ok(
   format($$ select public.finish_upload(%L, null, 'falso.pdf', gen_random_uuid(), 1) $$, (select id from g)),
-  'P0002', null, 'no se registra una versión sin el objeto en Storage');
+  'P0001', 'Esta subida no está preparada. Probá de nuevo', 'no se registra una versión sin reservarla con begin_upload');
 
 select throws_ok(
   format($$ insert into public.file_versions (file_id, group_id, version_number, storage_path, size_bytes) values (%L, %L, 9, 'x', 1) $$,
