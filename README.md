@@ -108,8 +108,11 @@ Nunca se suben claves al repo: los `.env` están en `.gitignore` y solo se versi
 
 - **Row Level Security en todas las tablas:** cada usuario solo ve y modifica los datos de sus grupos.
 - **Operaciones sensibles en funciones de la base:** crear o unirse a un grupo, subir versiones, bloquear, eliminar. Esas funciones validan permisos; el cliente no puede escribir directo en esas tablas.
-- **Storage:** bucket privado y políticas por grupo según la ruta `groups/{group_id}/…`. Las descargas usan URLs firmadas de 60 segundos.
-- **Edge Functions:** el webhook valida el `secret_token` de Telegram, y las funciones internas un secreto compartido guardado en Vault.
+- **Storage:** bucket privado y políticas por grupo según la ruta `groups/{group_id}/…`. Solo se sube a rutas reservadas con `begin_upload`, y solo se leen los objetos de versiones que el plan deja ver. Las descargas usan URLs firmadas de 60 segundos.
+- **Funciones auxiliares** (`nombre_de`, `is_member_of`, etc.) no se pueden llamar desde la API.
+- **Códigos de invitación y de Telegram:** 10 caracteres con generador criptográfico. Los de 8 que ya existían siguen valiendo.
+- **Avatar:** lo pone el registro con Google; no se cambia desde la app (una URL libre dejaba ver la IP de quien la mostraba).
+- **Edge Functions:** el webhook valida el `secret_token` de Telegram, y las funciones internas un secreto compartido guardado en Vault. Los secretos se comparan en tiempo constante y los nombres que se mandan al chat se escapan.
 
 ## Cómo funciona
 
@@ -119,9 +122,11 @@ Los archivos van a Supabase Storage (bucket privado `archivos`), nunca a la base
 
 Subir un archivo son tres pasos:
 
-1. `begin_upload` valida que seas del grupo, que el archivo no lo esté editando otra persona y que haya espacio; devuelve la ruta.
-2. La app sube los bytes a Storage en esa ruta.
-3. `finish_upload` verifica que el objeto exista, toma el tamaño real desde Storage y registra la versión.
+1. `begin_upload` valida que seas del grupo, que el archivo no lo esté editando otra persona y que haya espacio, y te **reserva** la ruta (`pending_uploads`, 2 h).
+2. La app sube los bytes a Storage en esa ruta. Storage solo acepta objetos en una ruta que reservaste vos.
+3. `finish_upload` verifica la reserva y el objeto, toma el tamaño real desde Storage, controla el espacio del plan con ese tamaño y registra la versión. La carpeta y el nombre salen de la reserva.
+
+El número de versión se asigna al terminar (última + 1), así una subida abandonada no deja huecos. Si otra persona terminó una versión mientras subías, la tuya se rechaza en vez de pisarla.
 
 El mismo nombre (sin importar mayúsculas) en la misma carpeta crea una versión nueva. Restaurar reutiliza el objeto viejo, así que no ocupa espacio extra. `groups.storage_used` se mantiene con triggers. Límite por archivo: 50 MB.
 
@@ -197,3 +202,5 @@ La estructura está lista, pero esto no está implementado:
 - **Arrastrar y soltar en la web:** se sueltan archivos, no carpetas.
 - **Android:** compila y arranca, pero no está probado de punta a punta en un dispositivo.
 - **Login con Google:** necesita credenciales propias de Google Cloud.
+- **Realtime y borrados:** Supabase no aplica la RLS a los eventos de borrado. Alguien que conozca el UUID de un grupo ajeno puede enterarse de qué tareas se borran y quién sale (solo ids, sin nombres ni contenido).
+- **Antes de producción:** en Auth, exigir confirmación de email, contraseñas de 8 o más caracteres y `skip_nonce_check = false` para Google (`config.toml` está pensado para local).

@@ -56,14 +56,15 @@ Usuarios de prueba del seed: `ana@tpdrive.test` y `juan@tpdrive.test` (contrase�
 - Probar cada cambio primero en la web; Android se usa como verificación de compilación.
 - Toda tabla nueva lleva RLS y su test pgTAP. Las operaciones sensibles (subir versiones, bloquear, unirse a un grupo) van en funciones `security definer` que validan permisos; el cliente no escribe directo en esas tablas.
 - Las migraciones son nuevas y en orden (`supabase/migrations/AAAAMMDDhhmmss_nombre.sql`); no editar las ya commiteadas.
-- Rutas de Storage: `groups/{group_id}/files/{file_id}/v{n}`.
+- Rutas de Storage: `groups/{group_id}/files/{file_id}/v{n}`. Toda subida pasa por `begin_upload` (reserva la ruta) y `finish_upload`; Storage rechaza rutas no reservadas. El `n` de la ruta es la clave de la reserva y casi siempre coincide con el número de versión, que se asigna al terminar.
 - Los tests pgTAP de conteos filtran por el grupo que crea el propio test, para no depender de datos locales.
 
 ## Trampas conocidas
 
 - Riverpod 3 solo notifica si el valor cambia: los streams de Realtime emiten un contador (`map((_) => ++n)`), no `null`.
 - Los errores esperados son `AppFailure` y no se reintentan (`reintentoProviders` en el `ProviderScope`); si no, Riverpod reintenta y la pantalla queda cargando.
-- Realtime respeta RLS; las tablas que necesitan eventos de borrado tienen `replica identity full`.
+- Realtime respeta RLS en altas y cambios, pero no en borrados: un evento DELETE llega a cualquiera que se suscriba con el `group_id` (solo con la clave primaria). No poner datos sensibles en la clave primaria.
+- Después de `npx supabase db reset`, Realtime local puede quedar roto (error `42P10 ... ON CONFLICT` al suscribirse). Se arregla con `npx supabase stop` y `npx supabase start`.
 - La actividad se ordena con `clock_timestamp()`, no `now()` (que es constante dentro de la transacción).
 - `storage_used` se ajusta con triggers a nivel sentencia en los borrados, para no restar dos veces en cascada.
 - Android: `127.0.0.1` se traduce a `10.0.2.2` en el emulador; `kotlin.incremental=false` porque el proyecto y el pub cache están en discos distintos. Compilar con el emulador apagado si hay poca RAM.
