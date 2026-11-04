@@ -11,6 +11,19 @@ Guía para trabajar en este repo. El detalle funcional está en el README.
 - Antes de pushear, revisar `git log -1 --format=%B` (y la descripción del PR) para confirmar que no quedó ninguna atribución.
 - Commits chicos y descriptivos, en español.
 - Variables de entorno en `.env` (con `.env.example`). Nunca subir claves al repo. El token del bot va en variables de entorno, nunca en el código.
+- El hook `.githooks/commit-msg` rechaza atribuciones y autores distintos. Activarlo una vez por clon: `git config core.hooksPath .githooks`.
+
+## Agentes revisores
+
+Están en `.claude/agents/`. Lanzarlos en paralelo sobre lo que cambió, antes de commitear:
+
+| Si cambió… | Agentes |
+|---|---|
+| `supabase/migrations/`, `supabase/functions/` | `seguridad` y `base-de-datos` |
+| `app/lib/` | `flutter` (y `seguridad` si maneja datos o permisos) |
+| algo nuevo sin tests | `tests` |
+
+Antes de pasar a `main`: revisión completa con `seguridad`, `base-de-datos` y `flutter`. Los revisores no editan; sus hallazgos se verifican antes de corregir.
 
 ## Stack
 

@@ -12,7 +12,8 @@ supabase/.branches/
 # Editores / SO / herramientas locales
 .idea/
 .vscode/
-.claude/
+.claude/*
+!.claude/agents/
 *.iml
 .DS_Store
 Thumbs.db
