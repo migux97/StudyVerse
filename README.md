@@ -1,4 +1,4 @@
-# TP Drive
+# StudyVerse
 
 App para que estudiantes universitarios trabajen en grupo en sus TPs, tan simple como Google Drive: entrás, ves las carpetas de tus grupos, subís archivos y listo. Un solo código Flutter para **Android** y **Web**, con Supabase como backend.
 
@@ -10,7 +10,10 @@ App para que estudiantes universitarios trabajen en grupo en sus TPs, tan simple
 - **Tareas por TP.** Cada tarea tiene responsable, fecha límite y estado. La vista **Aportes** muestra cuántas tareas completó y cuántas versiones subió cada integrante.
 - **Actividad.** Un feed por grupo: "Juan subió la v3 de Informe.docx", "Ana completó la tarea…".
 - **Bot de Telegram.** Avisa las versiones nuevas, los bloqueos y las tareas completadas, y recuerda las fechas límite el día anterior.
-- **Interfaz.** Material 3, modo claro / oscuro / del sistema, todo en español.
+- **Cuentas.** Registro con nombre, usuario (`@usuario`, único) y contraseña segura (8 caracteres, mayúscula, minúscula y número, con los requisitos en vivo). El email se confirma con un código de 6 números. También se entra con un código por mail (sin contraseña) o con Google, y se recupera la contraseña con un código.
+- **Sesiones como en Drive.** Quedás conectado hasta que cierres sesión. En *Tu cuenta › Dispositivos conectados* ves dónde está abierta (navegador, sistema, último uso) y cerrás cualquiera, o todas menos la actual. Cambiar la contraseña cierra las demás.
+- **Perfil.** Foto (se recorta y achica antes de subirla), nombre, usuario, carrera y universidad. Google se puede conectar a una cuenta creada con email, y viceversa.
+- **Interfaz.** Material 3, blanco y celeste en modo claro y azul noche en modo oscuro (o el del sistema), todo en español. Los avisos son como los de Drive: cortos y al pie, sin cartelones rojos; los errores de un campo van debajo del campo.
   - En el celular: lista de archivos y barra de secciones abajo.
   - En la PC: columnas, riel lateral, panel de detalles y arrastrar y soltar archivos.
 
@@ -55,7 +58,9 @@ npx supabase db reset                    # aplica migraciones + seed
 
 `npx supabase status` muestra la URL de la API, la **Publishable key** y el Studio (http://127.0.0.1:54323).
 
-Usuarios de prueba del seed: `ana@tpdrive.test` y `juan@tpdrive.test` (contraseña en `supabase/seed.sql`, solo para local).
+Usuarios de prueba del seed: `ana@studyverse.test` y `juan@studyverse.test` (contraseña en `supabase/seed.sql`, solo para local).
+
+Los correos (códigos de registro, de entrada y de recuperación) no salen a internet en local: se ven en Mailpit, http://127.0.0.1:54324.
 
 ### 2. App
 
@@ -81,7 +86,8 @@ El script crea `supabase/functions/.env` con secretos aleatorios y los registra 
 
 1. En Google Cloud Console, crear un ID de cliente OAuth **Web** con la URI de redirección `http://127.0.0.1:54321/auth/v1/callback`.
 2. Completar `supabase/.env` con el client id y el secret, y reiniciar (`npx supabase stop && npx supabase start`).
-3. Android vuelve a la app por el deep link `io.tpdrive.app://login-callback`.
+3. Android vuelve a la app por el deep link `io.studyverse.app://login-callback`.
+4. Para conectar Google a una cuenta existente se usa la misma configuración (`enable_manual_linking = true`).
 
 ## Tests
 
@@ -110,6 +116,8 @@ Nunca se suben claves al repo: los `.env` están en `.gitignore` y solo se versi
 - **Operaciones sensibles en funciones de la base:** crear o unirse a un grupo, subir versiones, bloquear, eliminar. Esas funciones validan permisos; el cliente no puede escribir directo en esas tablas.
 - **Storage:** bucket privado y políticas por grupo según la ruta `groups/{group_id}/…`. Solo se sube a rutas reservadas con `begin_upload`, y solo se leen los objetos de versiones que el plan deja ver. Las descargas usan URLs firmadas de 60 segundos.
 - **Funciones auxiliares** (`nombre_de`, `is_member_of`, etc.) no se pueden llamar desde la API.
+- **Fotos de perfil:** bucket `avatares` público (como las de Google), una carpeta por usuario; cada uno solo sube y borra en la suya, máximo 1 MB y solo JPG, PNG o WebP. La foto se fija con `set_avatar`, que verifica que sea de tu carpeta.
+- **Dispositivos:** `mis_sesiones` y `cerrar_sesion` solo ven y cierran sesiones propias; la tabla `auth.sessions` no es accesible desde la app.
 - **Códigos de invitación y de Telegram:** 10 caracteres con generador criptográfico. Los de 8 que ya existían siguen valiendo.
 - **Avatar:** lo pone el registro con Google; no se cambia desde la app (una URL libre dejaba ver la IP de quien la mostraba).
 - **En vivo:** los avisos van por canales privados de Realtime Broadcast (`grupo:{id}:tareas`, `usuario:{id}:grupos`, …) y la RLS de `realtime.messages` decide quién escucha cada uno. Los avisos no llevan datos: la app vuelve a leer con su RLS. No se usa `postgres_changes` porque Supabase no aplica la RLS a los borrados.
@@ -183,7 +191,9 @@ Registrá el webhook del bot:
 curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<proyecto>.supabase.co/functions/v1/telegram-webhook&secret_token=<TELEGRAM_WEBHOOK_SECRET>"
 ```
 
-En Auth → URL Configuration, agregá la URL de la web y `io.tpdrive.app://login-callback`.
+En Auth → URL Configuration, agregá la URL de la web y `io.studyverse.app://login-callback`.
+
+En Auth → Email Templates, cargá las plantillas de `supabase/templates/` (mandan el código con `{{ .Token }}`), y configurá un SMTP propio en Auth → SMTP Settings: el de Supabase solo manda unos pocos correos por hora.
 
 **Web:** `flutter build web --dart-define-from-file=.env` genera `app/build/web`, para cualquier hosting estático.
 
@@ -203,4 +213,5 @@ La estructura está lista, pero esto no está implementado:
 - **Arrastrar y soltar en la web:** se sueltan archivos, no carpetas.
 - **Android:** compila y arranca, pero no está probado de punta a punta en un dispositivo.
 - **Login con Google:** necesita credenciales propias de Google Cloud.
-- **Antes de producción:** en Auth, exigir confirmación de email, contraseñas de 8 o más caracteres y `skip_nonce_check = false` para Google (`config.toml` está pensado para local).
+- **Antes de producción:** `config.toml` ya exige confirmar el email y contraseñas seguras, pero en el proyecto de supabase.com hay que configurarlo igual en el panel (Auth → Providers → Email y Password). Para Google, `skip_nonce_check = false` salvo que el login nativo de Android lo necesite.
+- **Sesiones:** no vencen solas (como en Drive). Cerrar un dispositivo invalida su sesión de inmediato para renovarse, pero el token que ya tenía sigue valiendo hasta una hora.
