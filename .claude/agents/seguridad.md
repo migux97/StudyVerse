@@ -17,7 +17,7 @@ Leé primero `CLAUDE.md` y la sección "Seguridad" del `README.md`.
 - Columnas que el cliente no debe tocar (`plan`, `storage_used`, `locked_by`, `created_by`, `role`) no son actualizables por `authenticated`: revisar `grant`/`revoke` por columna y triggers.
 - Funciones `security definer`: tienen `set search_path` fijo, validan que `auth.uid()` sea del grupo y su rol, no confían en ids que manda el cliente sin chequearlos, y tienen `revoke execute ... from public/anon` cuando corresponde.
 - Funciones internas (pg_cron, outbox, limpieza) no son ejecutables por `authenticated` ni `anon`.
-- Realtime: las tablas publicadas no filtran datos de otros grupos.
+- Realtime: ninguna tabla de `public` está en la publicación `supabase_realtime` (los DELETE de `postgres_changes` no pasan por la RLS); los avisos van por canales privados de Broadcast, no llevan datos de las filas, y `realtime_topic_allowed` solo deja escuchar los canales del propio usuario y de sus grupos.
 
 **Storage**
 - Bucket `archivos` privado; políticas atadas a la ruta `groups/{group_id}/files/{file_id}/v{n}` y a la membresía.

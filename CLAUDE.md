@@ -61,9 +61,9 @@ Usuarios de prueba del seed: `ana@tpdrive.test` y `juan@tpdrive.test` (contrase�
 
 ## Trampas conocidas
 
-- Riverpod 3 solo notifica si el valor cambia: los streams de Realtime emiten un contador (`map((_) => ++n)`), no `null`.
+- Riverpod 3 solo notifica si el valor cambia: los streams de avisos en vivo emiten un contador (`map((_) => ++n)`), no `null`.
+- En vivo: canales privados de Broadcast (`core/realtime/canales.dart` y la migración `realtime_privado`). Una tabla nueva que se vea en vivo necesita un trigger `avisar_grupo('<canal>')`; si hace falta un canal nuevo, agregarlo también en `realtime_topic_allowed`. No usar `postgres_changes` ni volver a agregar tablas a la publicación `supabase_realtime`: los DELETE no pasan por la RLS.
 - Los errores esperados son `AppFailure` y no se reintentan (`reintentoProviders` en el `ProviderScope`); si no, Riverpod reintenta y la pantalla queda cargando.
-- Realtime respeta RLS en altas y cambios, pero no en borrados: un evento DELETE llega a cualquiera que se suscriba con el `group_id` (solo con la clave primaria). No poner datos sensibles en la clave primaria.
 - Después de `npx supabase db reset`, Realtime local puede quedar roto (error `42P10 ... ON CONFLICT` al suscribirse). Se arregla con `npx supabase stop` y `npx supabase start`.
 - La actividad se ordena con `clock_timestamp()`, no `now()` (que es constante dentro de la transacción).
 - `storage_used` se ajusta con triggers a nivel sentencia en los borrados, para no restar dos veces en cascada.

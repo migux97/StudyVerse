@@ -112,6 +112,7 @@ Nunca se suben claves al repo: los `.env` están en `.gitignore` y solo se versi
 - **Funciones auxiliares** (`nombre_de`, `is_member_of`, etc.) no se pueden llamar desde la API.
 - **Códigos de invitación y de Telegram:** 10 caracteres con generador criptográfico. Los de 8 que ya existían siguen valiendo.
 - **Avatar:** lo pone el registro con Google; no se cambia desde la app (una URL libre dejaba ver la IP de quien la mostraba).
+- **En vivo:** los avisos van por canales privados de Realtime Broadcast (`grupo:{id}:tareas`, `usuario:{id}:grupos`, …) y la RLS de `realtime.messages` decide quién escucha cada uno. Los avisos no llevan datos: la app vuelve a leer con su RLS. No se usa `postgres_changes` porque Supabase no aplica la RLS a los borrados.
 - **Edge Functions:** el webhook valida el `secret_token` de Telegram, y las funciones internas un secreto compartido guardado en Vault. Los secretos se comparan en tiempo constante y los nombres que se mandan al chat se escapan.
 
 ## Cómo funciona
@@ -202,5 +203,4 @@ La estructura está lista, pero esto no está implementado:
 - **Arrastrar y soltar en la web:** se sueltan archivos, no carpetas.
 - **Android:** compila y arranca, pero no está probado de punta a punta en un dispositivo.
 - **Login con Google:** necesita credenciales propias de Google Cloud.
-- **Realtime y borrados:** Supabase no aplica la RLS a los eventos de borrado. Alguien que conozca el UUID de un grupo ajeno puede enterarse de qué tareas se borran y quién sale (solo ids, sin nombres ni contenido).
 - **Antes de producción:** en Auth, exigir confirmación de email, contraseñas de 8 o más caracteres y `skip_nonce_check = false` para Google (`config.toml` está pensado para local).
