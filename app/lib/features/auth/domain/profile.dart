@@ -4,14 +4,24 @@ class Profile {
   const Profile({
     required this.id,
     required this.nombre,
+    this.username,
     this.avatarUrl,
+    this.carrera,
+    this.universidad,
     this.plan = Plan.free,
     required this.createdAt,
   });
 
   final String id;
   final String nombre;
+
+  /// Sin @. Puede faltar en datos que vienen de consultas que no lo piden.
+  final String? username;
+
+  /// URL (Google) o `storage:{ruta}` para una foto subida a StudyVerse.
   final String? avatarUrl;
+  final String? carrera;
+  final String? universidad;
   final Plan plan;
   final DateTime createdAt;
 
@@ -24,19 +34,40 @@ class Profile {
     return (partes[0][0] + partes[1][0]).toUpperCase();
   }
 
+  /// Ruta en el bucket `avatares` si la foto se subió a StudyVerse.
+  String? get avatarPath =>
+      avatarUrl != null && avatarUrl!.startsWith('storage:') ? avatarUrl!.substring(8) : null;
+
+  /// "Ingeniería en Sistemas · UTN", o null si no cargó nada.
+  String? get estudios {
+    final partes = [carrera, universidad].whereType<String>().where((s) => s.trim().isNotEmpty);
+    return partes.isEmpty ? null : partes.join(' · ');
+  }
+
   factory Profile.fromMap(Map<String, dynamic> map) => Profile(
         id: map['id'] as String,
         nombre: map['nombre'] as String,
+        username: map['username'] as String?,
         avatarUrl: map['avatar_url'] as String?,
+        carrera: map['carrera'] as String?,
+        universidad: map['universidad'] as String?,
         plan: Plan.values.byName(map['plan'] as String? ?? 'free'),
         createdAt: DateTime.parse(map['created_at'] as String),
       );
+}
 
-  Profile copyWith({String? nombre, String? avatarUrl}) => Profile(
-        id: id,
-        nombre: nombre ?? this.nombre,
-        avatarUrl: avatarUrl ?? this.avatarUrl,
-        plan: plan,
-        createdAt: createdAt,
-      );
+/// Campos editables del perfil. `null` = no cambiar; '' = borrar (carrera y universidad).
+class CambiosPerfil {
+  const CambiosPerfil({this.nombre, this.username, this.carrera, this.universidad});
+  final String? nombre;
+  final String? username;
+  final String? carrera;
+  final String? universidad;
+
+  Map<String, dynamic> toMap() => {
+        if (nombre != null) 'nombre': nombre!.trim(),
+        if (username != null) 'username': username!.trim().toLowerCase(),
+        if (carrera != null) 'carrera': carrera!.trim().isEmpty ? null : carrera!.trim(),
+        if (universidad != null) 'universidad': universidad!.trim().isEmpty ? null : universidad!.trim(),
+      };
 }

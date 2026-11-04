@@ -7,6 +7,7 @@ import '../../../core/widgets/auth_layout.dart';
 import '../domain/auth_repository.dart';
 import '../domain/validators.dart';
 import 'auth_providers.dart';
+import 'campos.dart';
 import 'google_button.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -19,43 +20,61 @@ class RegisterScreen extends ConsumerStatefulWidget {
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nombre = TextEditingController();
+  final _usuario = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _confirmar = TextEditingController();
   bool _cargando = false;
+  String? _errorEmail;
 
   @override
   void dispose() {
     _nombre.dispose();
+    _usuario.dispose();
     _email.dispose();
     _password.dispose();
+    _confirmar.dispose();
     super.dispose();
   }
 
+  String? get _from => GoRouterState.of(context).uri.queryParameters['from'];
+
   Future<void> _registrar() async {
+    setState(() => _errorEmail = null);
     if (!_formKey.currentState!.validate()) return;
     setState(() => _cargando = true);
+    final repo = ref.read(authRepositoryProvider);
     try {
-      final conSesion = await ref.read(authRepositoryProvider).signUpWithEmail(
-            nombre: _nombre.text,
-            email: _email.text,
-            password: _password.text,
-          );
-      if (!conSesion && mounted) {
-        mostrarMensaje(context, 'Te enviamos un email para confirmar tu cuenta');
-        context.go(Routes.login);
+      if (!await repo.usernameDisponible(_usuario.text.trim().toLowerCase())) {
+        _campoUsuario.currentState?.marcarOcupado();
+        return;
       }
+      await repo.signUpWithEmail(
+        nombre: _nombre.text,
+        username: _usuario.text,
+        email: _email.text,
+        password: _password.text,
+      );
+      if (mounted) context.go(Routes.codigo(MotivoCodigo.registro, from: _from), extra: _email.text.trim());
     } on AuthFailure catch (e) {
-      if (mounted) mostrarMensaje(context, e.mensaje, error: true);
+      if (!mounted) return;
+      if (e.codigo == 'user_already_exists' || e.codigo == 'email_exists') {
+        setState(() => _errorEmail = e.mensaje);
+      } else {
+        mostrarMensaje(context, e.mensaje, error: true);
+      }
     } finally {
       if (mounted) setState(() => _cargando = false);
     }
   }
 
+  final _campoUsuario = GlobalKey<CampoUsuarioState>();
+
   @override
   Widget build(BuildContext context) {
     return AuthLayout(
       titulo: 'Creá tu cuenta',
-      subtitulo: 'Gratis, en menos de un minuto',
+      subtitulo: 'Es gratis y te lleva un minuto',
       child: AutofillGroup(
         child: Form(
           key: _formKey,
@@ -64,60 +83,51 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             children: [
               TextFormField(
                 controller: _nombre,
-                decoration: const InputDecoration(labelText: 'Nombre'),
+                decoration: const InputDecoration(labelText: 'Nombre y apellido'),
                 textCapitalization: TextCapitalization.words,
                 autofillHints: const [AutofillHints.name],
                 textInputAction: TextInputAction.next,
                 validator: Validators.nombre,
               ),
               const SizedBox(height: 16),
+              CampoUsuario(key: _campoUsuario, controller: _usuario),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _email,
-                decoration: const InputDecoration(labelText: 'Email'),
+                decoration: InputDecoration(labelText: 'Email', errorText: _errorEmail),
                 keyboardType: TextInputType.emailAddress,
                 autofillHints: const [AutofillHints.email],
                 textInputAction: TextInputAction.next,
                 validator: Validators.email,
               ),
               const SizedBox(height: 16),
-              TextFormField(
+              CampoContrasena(
                 controller: _password,
-                decoration: const InputDecoration(
-                  labelText: 'Contraseña',
-                  helperText: 'Mínimo 8 caracteres',
-                ),
-                obscureText: true,
-                autofillHints: const [AutofillHints.newPassword],
+                nueva: true,
                 textInputAction: TextInputAction.next,
                 validator: Validators.password,
               ),
+              RequisitosContrasena(controller: _password),
               const SizedBox(height: 16),
-              TextFormField(
-                decoration: const InputDecoration(labelText: 'Repetí la contraseña'),
-                obscureText: true,
-                onFieldSubmitted: (_) => _registrar(),
+              CampoContrasena(
+                controller: _confirmar,
+                etiqueta: 'Repetí la contraseña',
+                nueva: true,
+                onSubmitted: (_) => _registrar(),
                 validator: Validators.confirmarPassword(() => _password.text),
               ),
               const SizedBox(height: 24),
-              FilledButton(
-                onPressed: _cargando ? null : _registrar,
-                child: _cargando
-                    ? const SizedBox.square(
-                        dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Crear cuenta'),
-              ),
+              BotonPrincipal(texto: 'Crear cuenta', cargando: _cargando, onPressed: _registrar),
               const SizedBox(height: 16),
               const GoogleButton(),
               const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.center,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   const Text('¿Ya tenés cuenta?'),
                   TextButton(
-                    onPressed: () => context.go(Routes.conDestino(
-                      Routes.login,
-                      GoRouterState.of(context).uri.queryParameters['from'],
-                    )),
+                    onPressed: () => context.go(Routes.conDestino(Routes.login, _from)),
                     child: const Text('Entrá'),
                   ),
                 ],

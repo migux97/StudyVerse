@@ -4,8 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/domain/auth_repository.dart';
 import '../../features/auth/presentation/auth_providers.dart';
-import '../../features/auth/presentation/forgot_password_screen.dart';
+import '../../features/auth/presentation/codigo_screen.dart';
+import '../../features/auth/presentation/dispositivos_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/profile_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
@@ -21,9 +23,12 @@ import '../../features/tasks/presentation/tasks_screen.dart';
 class Routes {
   static const login = '/login';
   static const registro = '/registro';
-  static const recuperar = '/recuperar';
   static const grupos = '/';
   static const perfil = '/perfil';
+  static const dispositivos = '/perfil/dispositivos';
+
+  /// Pantalla del código por mail. El email va como `extra` (no en la URL).
+  static String codigo(MotivoCodigo motivo, {String? from}) => conDestino('/codigo/${motivo.name}', from);
 
   static String grupo(String id) => '/grupos/$id';
   static String miembros(String id) => '/grupos/$id/miembros';
@@ -34,7 +39,9 @@ class Routes {
   static String telegram(String id) => '/grupos/$id/telegram';
   static String unirse(String codigo) => '/unirse/$codigo';
 
-  static const publicas = {login, registro, recuperar};
+  static const publicas = {login, registro};
+
+  static bool esPublica(String location) => publicas.contains(location) || location.startsWith('/codigo/');
 
   /// Agrega `?from=` para volver a donde se quería ir después del login.
   static String conDestino(String ruta, String? from) =>
@@ -44,7 +51,7 @@ class Routes {
 /// Decide a dónde redirigir según haya sesión o no. `null` = quedarse.
 /// `from` es la ruta a la que se quería ir antes de pedir el login.
 String? authRedirect({required bool loggedIn, required String location, String? from}) {
-  final esPublica = Routes.publicas.contains(location);
+  final esPublica = Routes.esPublica(location);
   if (!loggedIn && !esPublica) {
     return Routes.conDestino(Routes.login, location == Routes.grupos ? null : location);
   }
@@ -72,9 +79,19 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: Routes.login, builder: (_, _) => const LoginScreen()),
       GoRoute(path: Routes.registro, builder: (_, _) => const RegisterScreen()),
-      GoRoute(path: Routes.recuperar, builder: (_, _) => const ForgotPasswordScreen()),
+      GoRoute(
+        path: '/codigo/:motivo',
+        builder: (_, s) => CodigoScreen(
+          motivo: MotivoCodigo.values.asNameMap()[s.pathParameters['motivo']] ?? MotivoCodigo.entrar,
+          email: s.extra as String?,
+        ),
+      ),
       GoRoute(path: Routes.grupos, builder: (_, _) => const GroupsScreen()),
-      GoRoute(path: Routes.perfil, builder: (_, _) => const ProfileScreen()),
+      GoRoute(
+        path: Routes.perfil,
+        builder: (_, _) => const ProfileScreen(),
+        routes: [GoRoute(path: 'dispositivos', builder: (_, _) => const DispositivosScreen())],
+      ),
       GoRoute(
         path: '/grupos/:id',
         builder: (_, s) => GroupScreen(groupId: s.pathParameters['id']!),

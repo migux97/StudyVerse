@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:tpdrive/features/auth/domain/auth_repository.dart';
-import 'package:tpdrive/features/auth/presentation/auth_providers.dart';
-import 'package:tpdrive/features/auth/presentation/login_screen.dart';
+import 'package:studyverse/features/auth/domain/auth_repository.dart';
+import 'package:studyverse/features/auth/presentation/auth_providers.dart';
+import 'package:studyverse/features/auth/presentation/login_screen.dart';
 
 class _MockAuthRepository extends Mock implements AuthRepository {}
 
@@ -28,10 +28,10 @@ void main() {
         email: any(named: 'email'), password: any(named: 'password')));
   });
 
-  testWidgets('muestra el error traducido si falla el login', (tester) async {
+  testWidgets('email o contraseña incorrectos: el error va debajo de la contraseña', (tester) async {
     when(() => repo.signInWithEmail(
             email: any(named: 'email'), password: any(named: 'password')))
-        .thenThrow(const AuthFailure('Email o contraseña incorrectos'));
+        .thenThrow(const AuthFailure('El email o la contraseña no coinciden', codigo: 'invalid_credentials'));
 
     await tester.pumpWidget(app());
     await tester.enterText(find.widgetWithText(TextFormField, 'Email'), 'ana@uni.edu.ar');
@@ -41,6 +41,14 @@ void main() {
 
     verify(() => repo.signInWithEmail(email: 'ana@uni.edu.ar', password: 'incorrecta'))
         .called(1);
-    expect(find.text('Email o contraseña incorrectos'), findsOneWidget);
+    expect(find.text('El email o la contraseña no coinciden'), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing, reason: 'es un error del campo, no un aviso suelto');
+  });
+
+  testWidgets('ofrece entrar con un código y con Google', (tester) async {
+    await tester.pumpWidget(app());
+    expect(find.text('Entrá a StudyVerse'), findsOneWidget);
+    expect(find.text('Entrar con un código por mail'), findsOneWidget);
+    expect(find.text('Continuar con Google'), findsOneWidget);
   });
 }
