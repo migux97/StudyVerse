@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/task.dart';
 import '../domain/tasks_repository.dart';
+import '../../../core/realtime/canales.dart';
 
 class SupabaseTasksRepository implements TasksRepository {
   SupabaseTasksRepository(this._client);
@@ -49,27 +50,7 @@ class SupabaseTasksRepository implements TasksRepository {
       });
 
   @override
-  Stream<void> changes(String groupId) {
-    late final RealtimeChannel canal;
-    final controller = StreamController<void>.broadcast(
-      onCancel: () => _client.removeChannel(canal),
-    );
-    canal = _client
-        .channel('tareas-$groupId')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'tasks',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'group_id',
-            value: groupId,
-          ),
-          callback: (_) => controller.add(null),
-        )
-        .subscribe();
-    return controller.stream;
-  }
+  Stream<void> changes(String groupId) => escucharCanal(_client, Canales.tareas(groupId));
 
   Future<T> _guard<T>(Future<T> Function() fn) async {
     try {

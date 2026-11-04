@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/file_item.dart';
 import '../domain/files_repository.dart';
+import '../../../core/realtime/canales.dart';
 
 const _bucket = 'archivos';
 
@@ -129,52 +130,30 @@ class SupabaseFilesRepository implements FilesRepository {
       _guard(() => _client.rpc('request_unlock', params: {'p_file_id': fileId}));
 
   @override
-  Stream<PedidoEntrante> pedidosEntrantes(String miId) {
-    late final RealtimeChannel canal;
-    final controller = StreamController<PedidoEntrante>.broadcast(
-      onCancel: () => _client.removeChannel(canal),
-    );
+  Stream<PedidoEntrante> pedidosEntrantes(String miId) =>
+      escucharCanal(_client, Canales.pedidos(miId), evento: 'pedido').asyncExpand(_buscarPedido);
 
-    // El evento trae solo ids; se buscan el archivo y quién lo pide.
-    Future<void> alRecibir(PostgresChangePayload p) async {
-      try {
-        final fila = await _client
-            .from('lock_requests')
-            .select('file_id, group_id, file:files(nombre, folder_id), '
-                'requester:profiles!lock_requests_requested_by_fkey(nombre)')
-            .eq('id', p.newRecord['id'] as String)
-            .maybeSingle();
-        if (fila == null) return;
-        final archivo = fila['file'] as Map<String, dynamic>;
-        controller.add(PedidoEntrante(
-          fileId: fila['file_id'] as String,
-          groupId: fila['group_id'] as String,
-          folderId: archivo['folder_id'] as String?,
-          archivo: archivo['nombre'] as String,
-          quien: (fila['requester'] as Map<String, dynamic>?)?['nombre'] as String? ?? 'Alguien',
-        ));
-      } on PostgrestException {
-        // Si ya no existe (lo liberaron al toque), no hay nada que avisar.
-      }
-    }
-
-    final filtro = PostgresChangeFilter(
-      type: PostgresChangeFilterType.eq,
-      column: 'owner_id',
-      value: miId,
-    );
-    canal = _client.channel('pedidos-$miId');
-    for (final evento in [PostgresChangeEvent.insert, PostgresChangeEvent.update]) {
-      canal.onPostgresChanges(
-        event: evento,
-        schema: 'public',
-        table: 'lock_requests',
-        filter: filtro,
-        callback: alRecibir,
+  // El aviso trae solo el id del pedido; se buscan el archivo y quién lo pide.
+  Stream<PedidoEntrante> _buscarPedido(Map<String, dynamic> aviso) async* {
+    try {
+      final fila = await _client
+          .from('lock_requests')
+          .select('file_id, group_id, file:files(nombre, folder_id), '
+              'requester:profiles!lock_requests_requested_by_fkey(nombre)')
+          .eq('id', aviso['pedido'] as String)
+          .maybeSingle();
+      if (fila == null) return;
+      final archivo = fila['file'] as Map<String, dynamic>;
+      yield PedidoEntrante(
+        fileId: fila['file_id'] as String,
+        groupId: fila['group_id'] as String,
+        folderId: archivo['folder_id'] as String?,
+        archivo: archivo['nombre'] as String,
+        quien: (fila['requester'] as Map<String, dynamic>?)?['nombre'] as String? ?? 'Alguien',
       );
+    } on PostgrestException {
+      // Si ya no existe (lo liberaron al toque), no hay nada que avisar.
     }
-    canal.subscribe();
-    return controller.stream;
   }
 
   @override
@@ -207,30 +186,7 @@ class SupabaseFilesRepository implements FilesRepository {
       });
 
   @override
-  Stream<void> changes(String groupId) {
-    late final RealtimeChannel canal;
-    final controller = StreamController<void>.broadcast(
-      onCancel: () => _client.removeChannel(canal),
-    );
-    void emitir(PostgresChangePayload _) => controller.add(null);
-    final filtro = PostgresChangeFilter(
-      type: PostgresChangeFilterType.eq,
-      column: 'group_id',
-      value: groupId,
-    );
-    canal = _client.channel('archivos-$groupId');
-    for (final tabla in ['folders', 'files', 'file_versions', 'lock_requests']) {
-      canal.onPostgresChanges(
-        event: PostgresChangeEvent.all,
-        schema: 'public',
-        table: tabla,
-        filter: filtro,
-        callback: emitir,
-      );
-    }
-    canal.subscribe();
-    return controller.stream;
-  }
+  Stream<void> changes(String groupId) => escucharCanal(_client, Canales.archivos(groupId));
 
   Future<T> _guard<T>(Future<T> Function() fn) async {
     try {

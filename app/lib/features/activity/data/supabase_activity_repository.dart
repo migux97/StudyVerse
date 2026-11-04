@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/activity_item.dart';
 import '../domain/activity_repository.dart';
+import '../../../core/realtime/canales.dart';
 
 class SupabaseActivityRepository implements ActivityRepository {
   SupabaseActivityRepository(this._client);
@@ -25,25 +26,5 @@ class SupabaseActivityRepository implements ActivityRepository {
   }
 
   @override
-  Stream<void> changes(String groupId) {
-    late final RealtimeChannel canal;
-    final controller = StreamController<void>.broadcast(
-      onCancel: () => _client.removeChannel(canal),
-    );
-    canal = _client
-        .channel('actividad-$groupId')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.insert,
-          schema: 'public',
-          table: 'activity',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'group_id',
-            value: groupId,
-          ),
-          callback: (_) => controller.add(null),
-        )
-        .subscribe();
-    return controller.stream;
-  }
+  Stream<void> changes(String groupId) => escucharCanal(_client, Canales.actividad(groupId));
 }

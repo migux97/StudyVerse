@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/group.dart';
 import '../domain/groups_repository.dart';
 import '../domain/invite.dart';
+import '../../../core/realtime/canales.dart';
 
 class SupabaseGroupsRepository implements GroupsRepository {
   SupabaseGroupsRepository(this._client);
@@ -103,24 +104,7 @@ class SupabaseGroupsRepository implements GroupsRepository {
       _guard(() => _client.from('groups').delete().eq('id', groupId));
 
   @override
-  Stream<void> changes() {
-    late final RealtimeChannel canal;
-    final controller = StreamController<void>.broadcast(
-      onCancel: () => _client.removeChannel(canal),
-    );
-    void emitir(PostgresChangePayload _) => controller.add(null);
-    canal = _client
-        .channel('grupos-$_uid')
-        .onPostgresChanges(
-            event: PostgresChangeEvent.all, schema: 'public', table: 'groups', callback: emitir)
-        .onPostgresChanges(
-            event: PostgresChangeEvent.all,
-            schema: 'public',
-            table: 'group_members',
-            callback: emitir)
-        .subscribe();
-    return controller.stream;
-  }
+  Stream<void> changes() => escucharCanal(_client, Canales.misGrupos(_uid));
 
   Future<T> _guard<T>(Future<T> Function() fn) async {
     try {

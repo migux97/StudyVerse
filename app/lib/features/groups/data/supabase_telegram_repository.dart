@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/telegram.dart';
+import '../../../core/realtime/canales.dart';
 
 class SupabaseTelegramRepository implements TelegramRepository {
   SupabaseTelegramRepository(this._client);
@@ -41,27 +42,7 @@ class SupabaseTelegramRepository implements TelegramRepository {
       });
 
   @override
-  Stream<void> changes(String groupId) {
-    late final RealtimeChannel canal;
-    final controller = StreamController<void>.broadcast(
-      onCancel: () => _client.removeChannel(canal),
-    );
-    canal = _client
-        .channel('telegram-$groupId')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'telegram_links',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'group_id',
-            value: groupId,
-          ),
-          callback: (_) => controller.add(null),
-        )
-        .subscribe();
-    return controller.stream;
-  }
+  Stream<void> changes(String groupId) => escucharCanal(_client, Canales.telegram(groupId));
 
   Future<T> _guard<T>(Future<T> Function() fn) async {
     try {
