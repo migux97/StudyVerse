@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -44,8 +45,16 @@ class Subida {
 
 /// Cola de subidas en curso. Se sube de a uno para no saturar la conexión.
 class UploadsController extends Notifier<List<Subida>> {
+  /// Cuánto queda a la vista "Archivo subido" antes de irse solo, como en Drive.
+  static const ocultarDespues = Duration(seconds: 5);
+
+  Timer? _ocultar;
+
   @override
-  List<Subida> build() => const [];
+  List<Subida> build() {
+    ref.onDispose(() => _ocultar?.cancel());
+    return const [];
+  }
 
   bool get ocupado => state.any((s) => s.estado == EstadoSubida.subiendo);
 
@@ -55,6 +64,7 @@ class UploadsController extends Notifier<List<Subida>> {
     required List<Subida> subidas,
     String? nota,
   }) async {
+    _ocultar?.cancel();
     state = [...state.where((s) => s.estado == EstadoSubida.subiendo), ...subidas];
     final repo = ref.read(filesRepositoryProvider);
 
@@ -79,9 +89,23 @@ class UploadsController extends Notifier<List<Subida>> {
       }
     }
     ref.invalidate(filesProvider((groupId: groupId, folderId: folderId)));
+    _programarOcultar();
   }
 
-  void limpiar() => state = state.where((s) => s.estado == EstadoSubida.subiendo).toList();
+  /// Si terminó todo bien, el aviso se va solo. Los errores quedan hasta que
+  /// se cierran, para que se puedan leer.
+  void _programarOcultar() {
+    _ocultar?.cancel();
+    if (state.isEmpty || state.any((s) => s.estado != EstadoSubida.lista)) return;
+    _ocultar = Timer(ocultarDespues, () {
+      if (state.every((s) => s.estado == EstadoSubida.lista)) state = const [];
+    });
+  }
+
+  void limpiar() {
+    _ocultar?.cancel();
+    state = state.where((s) => s.estado == EstadoSubida.subiendo).toList();
+  }
 
   void _marcar(Subida s, EstadoSubida estado) {
     s.estado = estado;
