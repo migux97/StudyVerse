@@ -98,7 +98,9 @@ class _ExploradorState extends ConsumerState<_Explorador> {
                     enRaiz: folderId == null,
                     onSubir: () => elegirYSubir(context, ref,
                         groupId: grupo.id, folderId: folderId, existentes: lista, miId: miId),
-                    onCarpeta: () => nuevaCarpeta(context, ref, grupo.id, folderId),
+                    onCarpeta: () => folderId == null
+                        ? nuevaMateria(context, ref, grupo.id)
+                        : nuevaCarpeta(context, ref, grupo.id, folderId),
                   )
                 : RefreshIndicator(
                     onRefresh: () => Future.wait([
@@ -207,6 +209,16 @@ class _ExploradorState extends ConsumerState<_Explorador> {
               nuevoDocumento(context, ref, groupId: grupo.id, folderId: folderId, existentes: existentes);
             },
           ),
+          if (folderId == null)
+            ListTile(
+              leading: const Icon(Icons.folder_special_outlined),
+              title: const Text('Nueva materia'),
+              subtitle: const Text('Una carpeta con color para cada materia del grupo'),
+              onTap: () {
+                Navigator.pop(ctx);
+                nuevaMateria(context, ref, grupo.id);
+              },
+            ),
           ListTile(
             leading: const Icon(Icons.create_new_folder_outlined),
             title: const Text('Nueva carpeta'),
@@ -307,8 +319,9 @@ class _CarpetaVacia extends StatelessWidget {
       // Archivos chicos = menos bloqueos cruzados entre integrantes.
       detalle: [
         if (enRaiz)
-          'Armá una carpeta por TP. Tip: dividí el trabajo en varios archivos '
-              '(1-Introducción, 2-Desarrollo…) así cada uno edita su parte sin esperar a nadie.'
+          'Agregá una materia por cada una que cursen juntos, y adentro una carpeta por TP. '
+              'Tip: dividí el trabajo en varios archivos (1-Introducción, 2-Desarrollo…) así cada uno '
+              'edita su parte sin esperar a nadie.'
         else
           'Subí el primer archivo o armá subcarpetas para ordenar el TP.',
         if (kIsWeb) 'También podés arrastrar archivos desde tu compu.',
@@ -320,8 +333,8 @@ class _CarpetaVacia extends StatelessWidget {
           onPressed: onSubir,
         ),
         OutlinedButton.icon(
-          icon: const Icon(Icons.create_new_folder_outlined),
-          label: const Text('Nueva carpeta'),
+          icon: Icon(enRaiz ? Icons.folder_special_outlined : Icons.create_new_folder_outlined),
+          label: Text(enRaiz ? 'Nueva materia' : 'Nueva carpeta'),
           onPressed: onCarpeta,
         ),
       ]),

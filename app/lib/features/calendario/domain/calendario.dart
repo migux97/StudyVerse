@@ -32,6 +32,8 @@ class FechaCalendario {
     this.nota,
     this.hecha = false,
     this.creadoPor,
+    this.materia,
+    this.colorMateria,
   });
 
   final String id;
@@ -51,6 +53,10 @@ class FechaCalendario {
   final bool hecha;
   final String? creadoPor;
 
+  /// Materia del evento o de la carpeta de la tarea (si tiene), con su color.
+  final String? materia;
+  final int? colorMateria;
+
   bool get esTarea => tipo == TipoFecha.tarea;
 
   factory FechaCalendario.deTarea(Map<String, dynamic> m) => FechaCalendario(
@@ -61,6 +67,8 @@ class FechaCalendario {
         groupId: m['group_id'] as String,
         grupo: (m['grupo'] as Map<String, dynamic>?)?['nombre'] as String? ?? '',
         hecha: m['estado'] == 'hecha',
+        materia: materiaDe(m['carpeta'])?.nombre,
+        colorMateria: materiaDe(m['carpeta'])?.color,
       );
 
   factory FechaCalendario.deEvento(Map<String, dynamic> m) => FechaCalendario(
@@ -73,6 +81,8 @@ class FechaCalendario {
         grupo: (m['grupo'] as Map<String, dynamic>?)?['nombre'] as String? ?? '',
         nota: m['nota'] as String?,
         creadoPor: m['created_by'] as String?,
+        materia: materiaDe(m['materia'])?.nombre,
+        colorMateria: materiaDe(m['materia'])?.color,
       );
 }
 
@@ -141,6 +151,7 @@ class EventoNuevo {
     required this.dia,
     this.hora,
     this.nota,
+    this.folderId,
   });
   final String groupId;
   final String titulo;
@@ -148,6 +159,20 @@ class EventoNuevo {
   final DateTime dia;
   final String? hora;
   final String? nota;
+
+  /// Materia del evento (carpeta de materia del mismo grupo).
+  final String? folderId;
+}
+
+/// La materia de una carpeta embebida: ella misma o su carpeta de arriba
+/// (una tarea suele estar en "Química › TP 1").
+({String nombre, int? color})? materiaDe(Object? carpeta) {
+  if (carpeta is! Map) return null;
+  if (carpeta['es_materia'] == true) {
+    return (nombre: carpeta['nombre'] as String, color: (carpeta['color'] as num?)?.toInt());
+  }
+  final padre = carpeta['padre'];
+  return padre is Map ? materiaDe({...padre, 'padre': null}) : null;
 }
 
 abstract interface class CalendarioRepository {

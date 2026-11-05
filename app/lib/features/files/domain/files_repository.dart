@@ -23,6 +23,12 @@ abstract interface class FilesRepository {
 
   Future<Folder> createFolder(String groupId, String? parentId, String nombre);
   Future<void> renameFolder(String folderId, String nombre);
+
+  /// Agrega una materia al grupo (una carpeta de la raíz con color).
+  Future<Folder> crearMateria(String groupId, String nombre, int color);
+
+  /// Cambia el color, convierte una carpeta de la raíz en materia o la vuelve común.
+  Future<void> editarMateria(String folderId, {required bool esMateria, int? color});
   Future<void> deleteFolder(String folderId);
 
   /// Sube un archivo. Si ya hay uno con ese nombre en la carpeta (o se pasa

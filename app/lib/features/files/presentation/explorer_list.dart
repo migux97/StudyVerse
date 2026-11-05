@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/colores_materia.dart';
 import '../domain/file_item.dart';
 import '../../visor/presentation/visor_screen.dart';
 import 'file_actions.dart';
@@ -40,7 +41,8 @@ class ExplorerList extends StatelessWidget {
         padding: EdgeInsets.fromLTRB(ancho ? 24 : 8, 0, ancho ? 24 : 8, 112),
         children: [
           if (ancho) const _Encabezado(),
-          for (final c in carpetas)
+          // Las materias primero, como carpetas destacadas.
+          for (final c in [...carpetas.where((c) => c.esMateria), ...carpetas.where((c) => !c.esMateria)])
             _CarpetaTile(carpeta: c, ancho: ancho, onTap: () => onAbrirCarpeta(c)),
           for (final a in archivos)
             _ArchivoTile(
@@ -81,7 +83,7 @@ class _Encabezado extends StatelessWidget {
   }
 }
 
-enum _AccionCarpeta { renombrar, eliminar }
+enum _AccionCarpeta { renombrar, color, hacerMateria, quitarMateria, eliminar }
 
 class _CarpetaTile extends ConsumerWidget {
   const _CarpetaTile({required this.carpeta, required this.ancho, required this.onTap});
@@ -91,23 +93,48 @@ class _CarpetaTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = carpeta;
+    final enRaiz = c.parentId == null;
     return ListTile(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      leading: Icon(Icons.folder_rounded, color: Theme.of(context).colorScheme.primary, size: 28),
-      title: Text(carpeta.nombre, maxLines: 1, overflow: TextOverflow.ellipsis),
+      leading: Icon(
+        c.esMateria ? Icons.folder_special_rounded : Icons.folder_rounded,
+        color: c.esMateria ? colorMateria(context, c.color) : Theme.of(context).colorScheme.primary,
+        size: 28,
+      ),
+      title: Text(c.nombre, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: c.esMateria ? const Text('Materia') : null,
       onTap: onTap,
       trailing: PopupMenuButton<_AccionCarpeta>(
         tooltip: 'Opciones',
         onSelected: (a) => switch (a) {
-          _AccionCarpeta.renombrar => renombrarCarpeta(context, ref, carpeta),
-          _AccionCarpeta.eliminar => eliminarCarpeta(context, ref, carpeta),
+          _AccionCarpeta.renombrar => renombrarCarpeta(context, ref, c),
+          _AccionCarpeta.color => cambiarColorMateria(context, ref, c),
+          _AccionCarpeta.hacerMateria => marcarMateria(context, ref, c, esMateria: true),
+          _AccionCarpeta.quitarMateria => marcarMateria(context, ref, c, esMateria: false),
+          _AccionCarpeta.eliminar => eliminarCarpeta(context, ref, c),
         },
-        itemBuilder: (_) => const [
-          PopupMenuItem(
+        itemBuilder: (_) => [
+          const PopupMenuItem(
             value: _AccionCarpeta.renombrar,
             child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Cambiar nombre')),
           ),
-          PopupMenuItem(
+          if (c.esMateria)
+            const PopupMenuItem(
+              value: _AccionCarpeta.color,
+              child: ListTile(leading: Icon(Icons.palette_outlined), title: Text('Cambiar color')),
+            ),
+          if (enRaiz && !c.esMateria)
+            const PopupMenuItem(
+              value: _AccionCarpeta.hacerMateria,
+              child: ListTile(leading: Icon(Icons.folder_special_outlined), title: Text('Usar como materia')),
+            ),
+          if (c.esMateria)
+            const PopupMenuItem(
+              value: _AccionCarpeta.quitarMateria,
+              child: ListTile(leading: Icon(Icons.folder_outlined), title: Text('Dejar como carpeta común')),
+            ),
+          const PopupMenuItem(
             value: _AccionCarpeta.eliminar,
             child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Eliminar')),
           ),

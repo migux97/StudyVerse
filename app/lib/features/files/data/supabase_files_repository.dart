@@ -179,6 +179,18 @@ class SupabaseFilesRepository implements FilesRepository {
       _guard(() => _client.rpc('unlock_file', params: {'p_file_id': fileId}));
 
   @override
+  Future<Folder> crearMateria(String groupId, String nombre, int color) => _guard(() async {
+        final row = await _client
+            .rpc('crear_materia', params: {'p_group_id': groupId, 'p_nombre': nombre, 'p_color': color})
+            .single();
+        return Folder.fromMap(row);
+      });
+
+  @override
+  Future<void> editarMateria(String folderId, {required bool esMateria, int? color}) => _guard(() => _client.rpc(
+      'editar_materia', params: {'p_folder_id': folderId, 'p_es_materia': esMateria, 'p_color': color}));
+
+  @override
   Future<FileVersion> restore(String versionId) => _guard(() async {
         final row =
             await _client.rpc('restore_version', params: {'p_version_id': versionId}).single();

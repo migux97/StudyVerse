@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'materia_dialog.dart';
 import '../../../core/forms/validar.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/web/ventana.dart';
@@ -51,6 +52,39 @@ Future<void> nuevaCarpeta(BuildContext context, WidgetRef ref, String groupId, S
     ref.invalidate(foldersProvider(groupId));
   });
 }
+
+// Materias ---------------------------------------------------------------------
+
+Future<void> nuevaMateria(BuildContext context, WidgetRef ref, String groupId) async {
+  final cantidad = (ref.read(foldersProvider(groupId)).value ?? const <Folder>[]).where((c) => c.esMateria).length;
+  final datos = await pedirMateria(context, color: cantidad % 8);
+  if (datos == null || !context.mounted) return;
+  await _intentar(context, () async {
+    await ref.read(filesRepositoryProvider).crearMateria(groupId, datos.nombre, datos.color);
+    ref.invalidate(foldersProvider(groupId));
+    if (context.mounted) mostrarMensaje(context, 'Agregaste ${datos.nombre}');
+  });
+}
+
+Future<void> cambiarColorMateria(BuildContext context, WidgetRef ref, Folder carpeta) async {
+  final datos = await pedirMateria(context,
+      titulo: 'Color de ${carpeta.nombre}', accion: 'Guardar', color: carpeta.color ?? 0, soloColor: true);
+  if (datos == null || datos.color == carpeta.color || !context.mounted) return;
+  await _intentar(context, () async {
+    await ref.read(filesRepositoryProvider).editarMateria(carpeta.id, esMateria: true, color: datos.color);
+    ref.invalidate(foldersProvider(carpeta.groupId));
+  });
+}
+
+/// Convierte una carpeta de la raíz en materia, o la vuelve carpeta común.
+Future<void> marcarMateria(BuildContext context, WidgetRef ref, Folder carpeta, {required bool esMateria}) =>
+    _intentar(context, () async {
+      await ref.read(filesRepositoryProvider).editarMateria(carpeta.id, esMateria: esMateria);
+      ref.invalidate(foldersProvider(carpeta.groupId));
+      if (context.mounted) {
+        mostrarMensaje(context, esMateria ? '${carpeta.nombre} ahora es una materia' : '${carpeta.nombre} ahora es una carpeta');
+      }
+    });
 
 Future<void> renombrarCarpeta(BuildContext context, WidgetRef ref, Folder carpeta) async {
   final nombre = await pedirTexto(

@@ -103,7 +103,7 @@ class _Proximas extends StatelessWidget {
             leading: Icon(iconoDe(f.tipo), color: colorDe(f.tipo, scheme)),
             title: Text(f.titulo, maxLines: 1, overflow: TextOverflow.ellipsis),
             subtitle: Text(
-              [if (!f.esTarea) f.tipo.texto, f.grupo, ?f.hora].join(' · '),
+              [if (!f.esTarea) f.tipo.texto, f.materia ?? f.grupo, ?f.hora].join(' · '),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),

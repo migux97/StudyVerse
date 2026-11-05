@@ -5,6 +5,8 @@ class Folder {
     this.parentId,
     required this.nombre,
     required this.createdAt,
+    this.esMateria = false,
+    this.color,
   });
 
   final String id;
@@ -13,12 +15,18 @@ class Folder {
   final String nombre;
   final DateTime createdAt;
 
+  /// Una materia del grupo: carpeta de la raíz con color (0 a 7).
+  final bool esMateria;
+  final int? color;
+
   factory Folder.fromMap(Map<String, dynamic> map) => Folder(
         id: map['id'] as String,
         groupId: map['group_id'] as String,
         parentId: map['parent_id'] as String?,
         nombre: map['nombre'] as String,
         createdAt: DateTime.parse(map['created_at'] as String),
+        esMateria: map['es_materia'] as bool? ?? false,
+        color: (map['color'] as num?)?.toInt(),
       );
 }
 

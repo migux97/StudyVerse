@@ -119,7 +119,12 @@ class _ListaGrupos extends StatelessWidget {
 String _detalle(Group g) {
   final n = g.cantidadMiembros;
   final integrantes = n == null ? null : (n == 1 ? '1 integrante' : '$n integrantes');
-  return [g.materia, integrantes].whereType<String>().join(' · ');
+  final materias = switch (g.materias.length) {
+    0 => null,
+    1 || 2 => g.materias.join(', '),
+    final n => '${g.materias.take(2).join(', ')} y ${n - 2} más',
+  };
+  return [materias, integrantes].whereType<String>().join(' · ');
 }
 
 class _GrupoTile extends StatelessWidget {

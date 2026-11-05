@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/forms/validar.dart';
+import '../../../core/theme/colores_materia.dart';
 import '../../files/domain/folder_tree.dart';
 import '../../files/presentation/files_providers.dart';
 import '../../groups/presentation/groups_providers.dart';
@@ -141,10 +142,23 @@ class _TareaDialogState extends ConsumerState<_TareaDialog> {
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String?>(
                   initialValue: carpetas.any((c) => c.id == _carpeta) ? _carpeta : null,
-                  decoration: const InputDecoration(labelText: 'TP / carpeta (opcional)'),
+                  decoration: const InputDecoration(labelText: 'Materia o carpeta (opcional)'),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('Todo el grupo')),
-                    for (final c in carpetas) DropdownMenuItem(value: c.id, child: Text(c.nombre)),
+                    // Las materias primero, con su color.
+                    for (final c in [...carpetas.where((c) => c.esMateria), ...carpetas.where((c) => !c.esMateria)])
+                      DropdownMenuItem(
+                        value: c.id,
+                        child: Row(children: [
+                          Icon(
+                            c.esMateria ? Icons.folder_special_rounded : Icons.folder_outlined,
+                            size: 18,
+                            color: c.esMateria ? colorMateria(context, c.color) : null,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(child: Text(c.nombre, overflow: TextOverflow.ellipsis)),
+                        ]),
+                      ),
                   ],
                   onChanged: (v) => setState(() => _carpeta = v),
                 ),

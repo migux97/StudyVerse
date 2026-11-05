@@ -14,6 +14,7 @@ class Group {
     required this.createdAt,
     this.miRol,
     this.cantidadMiembros,
+    this.materias = const [],
   });
 
   final String id;
@@ -29,6 +30,9 @@ class Group {
   final GroupRole? miRol;
   final int? cantidadMiembros;
 
+  /// Nombres de las materias del grupo (sus carpetas de materia).
+  final List<String> materias;
+
   bool get soyAdmin => miRol == GroupRole.admin;
 
   factory Group.fromMap(Map<String, dynamic> map, {GroupRole? miRol, int? cantidadMiembros}) =>
@@ -43,6 +47,10 @@ class Group {
         createdAt: DateTime.parse(map['created_at'] as String),
         miRol: miRol,
         cantidadMiembros: cantidadMiembros,
+        materias: [
+          for (final m in (map['materias'] as List?) ?? const [])
+            if (m is Map && (m['es_materia'] ?? true) == true) m['nombre'] as String,
+        ]..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase())),
       );
 }
 

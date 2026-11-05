@@ -10,9 +10,10 @@ abstract interface class GroupsRepository {
   Future<Group> getGroup(String groupId);
   Future<List<GroupMember>> members(String groupId);
 
-  Future<Group> create({required String nombre, String? materia});
+  /// Crea el grupo con una carpeta por cada una de sus [materias].
+  Future<Group> create({required String nombre, List<String> materias = const []});
   Future<Group> join(String codigo);
-  Future<void> update(String groupId, {required String nombre, String? materia});
+  Future<void> update(String groupId, {required String nombre});
   Future<String> regenerateInviteCode(String groupId);
   Future<void> removeMember(String groupId, String userId);
   Future<void> setRole(String groupId, String userId, GroupRole rol);

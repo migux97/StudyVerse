@@ -5,6 +5,10 @@ import '../domain/calendario.dart';
 String _fecha(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
+/// La carpeta de la tarea y la de arriba (para saber de qué materia es).
+const _carpeta = 'carpeta:folders(nombre, color, es_materia, '
+    'padre:folders!folders_parent_id_fkey(nombre, color, es_materia))';
+
 class SupabaseCalendarioRepository implements CalendarioRepository {
   SupabaseCalendarioRepository(this._client);
   final SupabaseClient _client;
@@ -14,12 +18,12 @@ class SupabaseCalendarioRepository implements CalendarioRepository {
         final (tareas, eventos) = await (
           _client
               .from('tasks')
-              .select('id, titulo, due_date, estado, group_id, grupo:groups(nombre)')
+              .select('id, titulo, due_date, estado, group_id, grupo:groups(nombre), $_carpeta')
               .gte('due_date', _fecha(desde))
               .lte('due_date', _fecha(hasta)),
           _client
               .from('eventos')
-              .select('*, grupo:groups(nombre)')
+              .select('*, grupo:groups(nombre), materia:folders(nombre, color, es_materia)')
               .gte('fecha', _fecha(desde))
               .lte('fecha', _fecha(hasta)),
         ).wait;
@@ -37,6 +41,7 @@ class SupabaseCalendarioRepository implements CalendarioRepository {
         'fecha': _fecha(e.dia),
         'hora': e.hora,
         'nota': (e.nota?.trim().isEmpty ?? true) ? null : e.nota!.trim(),
+        'folder_id': e.folderId,
         'created_by': _client.auth.currentUser!.id,
       }));
 

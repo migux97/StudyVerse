@@ -5,8 +5,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/forms/validar.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/theme/colores_materia.dart';
 import '../../../core/widgets/auth_layout.dart';
 import '../../../core/widgets/pagina.dart';
+import '../../files/domain/file_item.dart';
+import '../../files/presentation/files_providers.dart';
 import '../../groups/presentation/groups_providers.dart';
 import '../domain/calendario.dart';
 import 'calendario_providers.dart';
@@ -289,6 +292,7 @@ class _FilaFecha extends ConsumerWidget {
     final f = fecha;
     final detalle = [
       if (!f.esTarea) f.tipo.texto,
+      ?f.materia,
       f.grupo,
       if (f.hora != null) f.hora!,
       if (f.esTarea) f.hecha ? 'Hecha' : 'Fecha límite',
@@ -343,6 +347,7 @@ class _EventoDialogState extends ConsumerState<_EventoDialog> {
   final _titulo = TextEditingController();
   final _nota = TextEditingController();
   String? _grupo;
+  String? _materia;
   var _tipo = TipoFecha.parcial;
   late var _dia = widget.dia;
   TimeOfDay? _hora;
@@ -367,6 +372,7 @@ class _EventoDialogState extends ConsumerState<_EventoDialog> {
             ? null
             : '${_hora!.hour.toString().padLeft(2, '0')}:${_hora!.minute.toString().padLeft(2, '0')}',
         nota: _nota.text,
+        folderId: _materia,
       ),
     );
   }
@@ -375,6 +381,10 @@ class _EventoDialogState extends ConsumerState<_EventoDialog> {
   Widget build(BuildContext context) {
     final grupos = ref.watch(myGroupsProvider).value ?? const [];
     _grupo ??= grupos.length == 1 ? grupos.first.id : null;
+    final materias = _grupo == null
+        ? const <Folder>[]
+        : [...?ref.watch(foldersProvider(_grupo!)).value?.where((c) => c.esMateria)]
+      ..sort((a, b) => a.nombre.toLowerCase().compareTo(b.nombre.toLowerCase()));
     final hoy = DateTime.now();
     return AlertDialog(
       title: const Text('Nuevo evento'),
@@ -388,9 +398,33 @@ class _EventoDialogState extends ConsumerState<_EventoDialog> {
                 initialValue: _grupo,
                 decoration: const InputDecoration(labelText: 'Grupo'),
                 items: [for (final g in grupos) DropdownMenuItem(value: g.id, child: Text(g.nombre))],
-                onChanged: (v) => setState(() => _grupo = v),
+                onChanged: (v) => setState(() {
+                  _grupo = v;
+                  _materia = null;
+                }),
                 validator: (v) => v == null ? 'Elegí el grupo' : null,
               ),
+              if (materias.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String?>(
+                  key: ValueKey(_grupo),
+                  initialValue: _materia,
+                  decoration: const InputDecoration(labelText: 'Materia (opcional)'),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('Sin materia')),
+                    for (final m in materias)
+                      DropdownMenuItem(
+                        value: m.id,
+                        child: Row(children: [
+                          Icon(Icons.circle, size: 12, color: colorMateria(context, m.color)),
+                          const SizedBox(width: 8),
+                          Flexible(child: Text(m.nombre, overflow: TextOverflow.ellipsis)),
+                        ]),
+                      ),
+                  ],
+                  onChanged: (v) => setState(() => _materia = v),
+                ),
+              ],
               const SizedBox(height: 16),
               SegmentedButton<TipoFecha>(
                 showSelectedIcon: false,
