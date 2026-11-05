@@ -9,6 +9,10 @@ App para que estudiantes universitarios trabajen en grupo en sus TPs, tan simple
 - **Bloqueos sin esperas.** "Estoy editando este archivo" avisa en vivo ("🔒 Ana está editando") y protege el original. Los demás pueden subir sus cambios como copia o pedirle que lo libere. El bloqueo vence solo y el admin puede forzar el desbloqueo.
 - **Documentos de StudyVerse.** *Nuevo › Documento* crea un documento que se escribe en la app, como en Word: títulos, negrita, cursiva, subrayado, colores, listas (con viñetas, numeradas y de tareas), alineación, citas y links. Se edita de a uno (con el bloqueo de siempre): mientras escribís se guarda solo cada pocos segundos y tus compañeros lo ven en vivo; al tocar *Listo* (o salir) queda como versión. Se descarga como Word (.docx) o PDF, y un .docx se abre como documento editable con *Editar en StudyVerse*.
 - **Visor de archivos.** *Abrir* muestra el archivo dentro de la app: PDF, imágenes (con zoom), Word, Excel y CSV (en solapas, como planilla), PowerPoint (el texto de cada diapositiva), video, audio, texto y código. Los archivos de texto y código se pueden editar ahí mismo; cada cambio guardado es una versión nueva.
+- **Inicio como Drive.** Arriba de *Mis grupos*: *Buscar en StudyVerse* (por nombre, en todos tus grupos, sin importar tildes), lo que *Se viene en la semana*, tus *Destacados* (estrella en el menú de cada archivo) y tus *Recientes* (lo último que abriste).
+- **Papelera.** Eliminar manda el archivo a la papelera del grupo (con *Deshacer*); ahí se restaura o se elimina para siempre. Se vacía sola a los 30 días.
+- **Calendario.** Las fechas límite de las tareas de todos tus grupos y los eventos que agregue el grupo (parciales, entregas, clases), en un mes con la lista de cada día.
+- **Comentarios.** Cada archivo y documento tiene su conversación (al costado en la PC, desde abajo en el celular). Mencionar a alguien con `@usuario` le avisa en vivo, esté donde esté en la app.
 - **Tareas por TP.** Cada tarea tiene responsable, fecha límite y estado. La vista **Aportes** muestra cuántas tareas completó y cuántas versiones subió cada integrante.
 - **Actividad.** Un feed por grupo: "Juan subió la v3 de Informe.docx", "Ana completó la tarea…".
 - **Bot de Telegram.** Avisa las versiones nuevas, los bloqueos y las tareas completadas, y recuerda las fechas límite el día anterior.
@@ -158,6 +162,14 @@ El mismo nombre (sin importar mayúsculas) en la misma carpeta crea una versión
 - **Listo** sube el contenido como versión nueva (eso libera el bloqueo) y un trigger descarta el borrador.
 - El borrador solo vale como "lo último" mientras su autor tenga el archivo bloqueado. Máximo 1 MB por borrador y 10 por persona.
 - Word y PDF se arman en la app (`documentos/domain/docx.dart` y `pdf_export.dart`), sin servidores extra.
+
+### Papelera, destacados, búsqueda, calendario y comentarios
+
+- **Papelera:** `delete_file` marca `files.deleted_at` (borrado lógico). Lo que está en la papelera no se edita, ni se bloquea, ni se renombra (trigger `files_papelera_inmutable`), y su nombre queda libre (el índice único es parcial). `restaurar_archivo` lo devuelve (con "(2)" si el nombre está ocupado) y `eliminar_definitivo` lo borra; los objetos de Storage los borra la limpieza diaria, y mientras tanto nadie los puede leer. `pg_cron` vacía lo de más de 30 días.
+- **Destacados y recientes:** tablas `destacados` y `vistos`, propias de cada usuario (RLS). `marcar_visto` guarda los últimos 50.
+- **Búsqueda:** `buscar_archivos` corre con los permisos de quien busca y compara sin tildes (`unaccent`, con índice).
+- **Calendario:** tareas con `due_date` + tabla `eventos` (parcial, entrega, clase, otro). Los edita o borra quien los creó o un admin.
+- **Comentarios:** tabla `comentarios`; un trigger calcula las menciones (solo integrantes del grupo) y avisa por `usuario:{id}:menciones`. El hilo se actualiza por `grupo:{id}:comentarios`.
 
 ### Tareas, actividad y aportes
 
