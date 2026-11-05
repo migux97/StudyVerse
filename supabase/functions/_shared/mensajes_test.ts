@@ -85,3 +85,10 @@ Deno.test("hoy en Argentina", () => {
   // 01:00 UTC del 2 = 22:00 del 1 en Argentina.
   assertEquals(hoyEnArgentina(new Date("2026-11-02T01:00:00Z")), "2026-11-01");
 });
+
+Deno.test("entregas y aprobaciones de tareas", () => {
+  const entregada = componerMensaje({ ...base, tipo: "tarea_entregada", payload: { titulo: "Introducción" } });
+  assertStringIncludes(entregada!, "entregó <b>Introducción</b>");
+  const aprobada = componerMensaje({ ...base, tipo: "tarea_aprobada", payload: { titulo: "Introducción", a: "<Beto>" } });
+  assertStringIncludes(aprobada!, "aprobó <b>Introducción</b> de &lt;Beto&gt;");
+});

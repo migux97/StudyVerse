@@ -82,6 +82,12 @@ export function componerMensaje(e: Envio): string | null {
     case "tarea_completada":
       cuerpo = `✅ ${actor} completó ${b(p.titulo)}`;
       break;
+    case "tarea_entregada":
+      cuerpo = `📬 ${actor} entregó ${b(p.titulo)}: falta que la apruebe un admin`;
+      break;
+    case "tarea_aprobada":
+      cuerpo = `✅ ${actor} aprobó ${b(p.titulo)}${p.a ? ` de ${escapar(p.a)}` : ""}`;
+      break;
     default:
       cuerpo = null;
   }
@@ -153,7 +159,7 @@ export function listarPendientes(tareas: TareaPendiente[], hoy: string): string 
     for (const t of lista) {
       const quien = t.responsable ? escapar(t.responsable) : "sin responsable";
       const cuando = t.due_date ? ` · ${describirFecha(t.due_date, hoy)}` : "";
-      const icono = t.estado === "en_progreso" ? "⏳" : "▫️";
+      const icono = t.estado === "en_progreso" ? "⏳" : t.estado === "entregada" ? "📬" : "▫️";
       lineas.push(`${icono} ${escapar(t.titulo)} — ${quien}${cuando}`);
     }
     lineas.push("");
