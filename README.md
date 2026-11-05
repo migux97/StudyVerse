@@ -101,8 +101,8 @@ El script crea `supabase/functions/.env` con secretos aleatorios y los registra 
 
 ### Login con Google
 
-1. En Google Cloud Console, crear un ID de cliente OAuth **Web** con la URI de redirección `http://127.0.0.1:54321/auth/v1/callback`.
-2. Completar `supabase/.env` con el client id y el secret, y reiniciar (`npx supabase stop && npx supabase start`).
+1. En Google Cloud Console, crear un ID de cliente OAuth **Web** con la URI de redirección `http://127.0.0.1:54321/auth/v1/callback` (y el origen `http://localhost:3000`).
+2. Completar `supabase/.env` con `SUPABASE_AUTH_EXTERNAL_GOOGLE_ENABLED=true`, el client id y el secret, y reiniciar (`npx supabase stop && npx supabase start`). Mientras no esté activado, la app no muestra el botón de Google.
 3. Android vuelve a la app por el deep link `io.studyverse.app://login-callback`.
 4. Para conectar Google a una cuenta existente se usa la misma configuración (`enable_manual_linking = true`).
 

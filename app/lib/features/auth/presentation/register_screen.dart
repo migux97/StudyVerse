@@ -124,8 +124,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               ),
               const SizedBox(height: 16),
               BotonPrincipal(texto: 'Crear cuenta', cargando: _cargando, onPressed: _registrar),
-              const SizedBox(height: 16),
-              const GoogleButton(),
+              const GoogleButton(espacioArriba: 16),
               const SizedBox(height: 24),
               Wrap(
                 alignment: WrapAlignment.center,

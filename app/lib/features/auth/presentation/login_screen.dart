@@ -104,7 +104,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 onPressed: () =>
                     context.push(Routes.codigo(MotivoCodigo.entrar, from: _from), extra: _email.text.trim()),
               ),
-              const SizedBox(height: 12),
               const GoogleButton(),
               const SizedBox(height: 24),
               Wrap(

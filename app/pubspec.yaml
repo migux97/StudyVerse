@@ -52,6 +52,7 @@ dependencies:
   archive: ^4.6.0
   xml: ^7.1.0
   pdf: ^3.13.1
+  http: ^1.6.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

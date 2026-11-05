@@ -354,8 +354,10 @@ skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
 
+# Se activa con SUPABASE_AUTH_EXTERNAL_GOOGLE_ENABLED=true en supabase/.env, junto
+# con el ID y el secreto (ver supabase/.env.example). Apagado, la app oculta el botón.
 [auth.external.google]
-enabled = true
+enabled = false
 client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
 secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
 redirect_uri = ""

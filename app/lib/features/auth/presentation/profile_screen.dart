@@ -14,6 +14,7 @@ import '../domain/profile.dart';
 import '../domain/validators.dart';
 import 'auth_providers.dart';
 import 'campos.dart';
+import 'google_button.dart';
 import 'user_avatar.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -370,6 +371,8 @@ class _CuentasConectadas extends ConsumerWidget {
     }
     final cuentas = estado.requireValue;
     final google = cuentas.where((c) => c.proveedor == 'google').firstOrNull;
+    // Sin el login con Google configurado no hay nada que conectar.
+    if (google == null && ref.watch(googleDisponibleProvider).value != true) return const SizedBox.shrink();
     return ListTile(
       leading: const Icon(Icons.link),
       title: const Text('Google'),

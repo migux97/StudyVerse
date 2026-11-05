@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:studyverse/features/auth/domain/auth_repository.dart';
 import 'package:studyverse/features/auth/presentation/auth_providers.dart';
+import 'package:studyverse/features/auth/presentation/google_button.dart';
 import 'package:studyverse/features/auth/presentation/login_screen.dart';
 
 class _MockAuthRepository extends Mock implements AuthRepository {}
@@ -11,8 +12,11 @@ class _MockAuthRepository extends Mock implements AuthRepository {}
 void main() {
   late _MockAuthRepository repo;
 
-  Widget app() => ProviderScope(
-        overrides: [authRepositoryProvider.overrideWithValue(repo)],
+  Widget app({bool google = true}) => ProviderScope(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(repo),
+          googleDisponibleProvider.overrideWith((ref) async => google),
+        ],
         child: const MaterialApp(home: LoginScreen()),
       );
 
@@ -47,8 +51,16 @@ void main() {
 
   testWidgets('ofrece entrar con un código y con Google', (tester) async {
     await tester.pumpWidget(app());
+    await tester.pump();
     expect(find.text('Entrá a StudyVerse'), findsOneWidget);
     expect(find.text('Entrar con un código por mail'), findsOneWidget);
     expect(find.text('Continuar con Google'), findsOneWidget);
+  });
+
+  testWidgets('sin Google configurado no muestra el botón', (tester) async {
+    await tester.pumpWidget(app(google: false));
+    await tester.pump();
+    expect(find.text('Entrar con un código por mail'), findsOneWidget);
+    expect(find.text('Continuar con Google'), findsNothing);
   });
 }
