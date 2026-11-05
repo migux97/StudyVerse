@@ -135,12 +135,12 @@ select throws_ok(format($$ insert into public.eventos (group_id, titulo, fecha, 
                         (select id from g)),
   '42501', null, 'ni los crea');
 select pg_temp.como('00000000-0000-0000-0000-0000000000b5');
-update public.eventos set fecha = fecha + 30 where titulo = 'Primer parcial';
-delete from public.eventos where titulo = 'Primer parcial';
+update public.eventos set fecha = fecha + 30 where titulo = 'Primer parcial' and group_id = (select id from g);
+delete from public.eventos where titulo = 'Primer parcial' and group_id = (select id from g);
 set local role postgres;
-select is((select count(*)::int from public.eventos where titulo = 'Primer parcial'), 1,
+select is((select count(*)::int from public.eventos where titulo = 'Primer parcial' and group_id = (select id from g)), 1,
   'un integrante que no lo creó ni es admin no lo borra');
-select is((select fecha from public.eventos where titulo = 'Primer parcial'), current_date + 3,
+select is((select fecha from public.eventos where titulo = 'Primer parcial' and group_id = (select id from g)), current_date + 3,
   'ni le cambia la fecha');
 select pg_temp.como('00000000-0000-0000-0000-0000000000a5');
 select throws_ok(format($$ insert into public.comentarios (file_id, group_id, texto, autor, created_at)
