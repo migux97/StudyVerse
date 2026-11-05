@@ -47,6 +47,13 @@ class FileVersion {
   final String? uploaderNombre;
   final DateTime createdAt;
 
+  /// Una versión no cambia: alcanza con el id (sirve de clave en providers).
+  @override
+  bool operator ==(Object other) => other is FileVersion && other.id == id;
+
+  @override
+  int get hashCode => id.hashCode;
+
   /// Fila de `file_versions`, con `uploader:profiles(nombre)` embebido.
   factory FileVersion.fromMap(Map<String, dynamic> map) => FileVersion(
         id: map['id'] as String,
@@ -96,6 +103,9 @@ class FileItem {
   final DateTime createdAt;
 
   FileKind get kind => fileKindFor(nombre);
+
+  /// El nombre como se muestra (los documentos de StudyVerse sin extensión).
+  String get visible => nombreVisible(nombre);
 
   /// Vence en `lock_until`; los bloqueos sin esa fecha, a las 24 h (como en la base).
   DateTime? get _venceEl => lockUntil ?? lockedAt?.add(duracionBloqueo);
@@ -192,9 +202,10 @@ const duracionBloqueo = Duration(hours: 24);
 
 enum EstadoBloqueo { libre, mio, deOtro }
 
-enum FileKind { pdf, documento, planilla, presentacion, imagen, video, audio, comprimido, codigo, texto, otro }
+enum FileKind { studyverse, pdf, documento, planilla, presentacion, imagen, video, audio, comprimido, codigo, texto, otro }
 
 const _extensiones = <FileKind, Set<String>>{
+  FileKind.studyverse: {extensionDocumento},
   FileKind.pdf: {'pdf'},
   FileKind.documento: {'doc', 'docx', 'odt', 'rtf', 'pages'},
   FileKind.planilla: {'xls', 'xlsx', 'ods', 'csv', 'numbers'},
@@ -209,6 +220,15 @@ const _extensiones = <FileKind, Set<String>>{
   },
   FileKind.texto: {'txt', 'md', 'tex'},
 };
+
+/// Extensión de los documentos de StudyVerse (no se muestra, como en Drive).
+const extensionDocumento = 'svdoc';
+
+/// "Informe.svdoc" → "Informe". El resto queda igual.
+String nombreVisible(String nombre) =>
+    nombre.toLowerCase().endsWith('.$extensionDocumento')
+        ? nombre.substring(0, nombre.length - extensionDocumento.length - 1)
+        : nombre;
 
 FileKind fileKindFor(String nombre) {
   final punto = nombre.lastIndexOf('.');

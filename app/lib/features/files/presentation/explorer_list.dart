@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/file_item.dart';
+import '../../visor/presentation/visor_screen.dart';
 import 'file_actions.dart';
 import 'file_icon.dart';
 
@@ -161,7 +162,7 @@ class _ArchivoTile extends ConsumerWidget {
     final v = archivo.current!;
     switch (a) {
       case _AccionArchivo.abrir:
-        abrirVersion(context, ref, v, archivo.nombre, descargar: false);
+        abrirArchivo(context, archivo);
       case _AccionArchivo.descargar:
         abrirVersion(context, ref, v, archivo.nombre, descargar: true);
       case _AccionArchivo.bloquear:
@@ -221,7 +222,7 @@ class _ArchivoTile extends ConsumerWidget {
       tooltip: 'Opciones',
       onSelected: (a) => _accion(context, ref, a),
       itemBuilder: (_) => [
-        item(_AccionArchivo.abrir, Icons.open_in_new, 'Abrir'),
+        item(_AccionArchivo.abrir, Icons.visibility_outlined, 'Abrir'),
         item(_AccionArchivo.descargar, Icons.download_rounded, 'Descargar'),
         const PopupMenuDivider(),
         ...switch (bloqueo) {
@@ -262,7 +263,7 @@ class _ArchivoTile extends ConsumerWidget {
     );
 
     final nombre = Row(children: [
-      Flexible(child: Text(archivo.nombre, maxLines: 1, overflow: TextOverflow.ellipsis)),
+      Flexible(child: Text(archivo.visible, maxLines: 1, overflow: TextOverflow.ellipsis)),
       const SizedBox(width: 8),
       _VersionChip(numero: v.versionNumber),
       if (bloqueo != EstadoBloqueo.libre) ...[

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth/presentation/auth_providers.dart';
@@ -35,6 +36,17 @@ final pedidosEntrantesProvider = StreamProvider<PedidoEntrante>((ref) {
   if (miId == null) return const Stream.empty();
   return ref.watch(filesRepositoryProvider).pedidosEntrantes(miId);
 });
+
+/// Un archivo, en vivo (para el visor y el editor).
+final fileProvider = FutureProvider.autoDispose.family<FileItem, ({String groupId, String fileId})>((ref, key) {
+  ref.watch(filesChangesProvider(key.groupId));
+  return ref.watch(filesRepositoryProvider).file(key.fileId);
+});
+
+/// Bytes de una versión. Se guardan mientras haya alguien mirándola.
+final fileBytesProvider = FutureProvider.autoDispose.family<Uint8List, FileVersion>(
+  (ref, v) => ref.watch(filesRepositoryProvider).bytes(v),
+);
 
 final versionsProvider =
     FutureProvider.family<List<FileVersion>, ({String groupId, String fileId})>((ref, key) {

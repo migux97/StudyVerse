@@ -15,6 +15,12 @@ abstract interface class FilesRepository {
   Future<List<FileItem>> files(String groupId, String? folderId);
   Future<List<FileVersion>> versions(String fileId);
 
+  /// Un archivo con su versión actual (para el visor).
+  Future<FileItem> file(String fileId);
+
+  /// El contenido de una versión (para mostrar texto, documentos, planillas).
+  Future<Uint8List> bytes(FileVersion version);
+
   Future<Folder> createFolder(String groupId, String? parentId, String nombre);
   Future<void> renameFolder(String folderId, String nombre);
   Future<void> deleteFolder(String folderId);
@@ -32,7 +38,8 @@ abstract interface class FilesRepository {
 
   /// URL firmada (corta) para abrir una versión, o descargarla con su nombre
   /// real si [descargar] (en Storage se llama `v{n}`).
-  Future<String> downloadUrl(FileVersion version, String nombre, {bool descargar = true});
+  /// [segundos]: lo que dura la URL (más para video y audio, que piden de a pedazos).
+  Future<String> downloadUrl(FileVersion version, String nombre, {bool descargar = true, int segundos = 60});
 
   /// "Estoy editando este archivo" por [minutos] (15 a 1440). Si ya era mío, lo renueva.
   Future<void> lock(String fileId, int minutos);

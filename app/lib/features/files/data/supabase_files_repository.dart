@@ -49,6 +49,16 @@ class SupabaseFilesRepository implements FilesRepository {
       });
 
   @override
+  Future<FileItem> file(String fileId) => _guard(() async {
+        final row = await _client.from('files').select(_selectArchivo).eq('id', fileId).maybeSingle();
+        if (row == null) throw const FilesFailure('Ese archivo ya no existe o no tenés acceso');
+        return FileItem.fromMap(row);
+      });
+
+  @override
+  Future<Uint8List> bytes(FileVersion version) => _guard(() => _storage.download(version.storagePath));
+
+  @override
   Future<Folder> createFolder(String groupId, String? parentId, String nombre) => _guard(() async {
         final row = await _client
             .from('folders')
@@ -114,10 +124,10 @@ class SupabaseFilesRepository implements FilesRepository {
       });
 
   @override
-  Future<String> downloadUrl(FileVersion version, String nombre, {bool descargar = true}) =>
+  Future<String> downloadUrl(FileVersion version, String nombre, {bool descargar = true, int segundos = 60}) =>
       _guard(() => _storage.createSignedUrl(
             version.storagePath,
-            60,
+            segundos,
             download: descargar ? DownloadBehavior.named(nombre) : null,
           ));
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/file_item.dart';
+import '../../visor/presentation/visor_screen.dart';
 import 'file_actions.dart';
 import 'file_icon.dart';
 import 'version_history_sheet.dart';
@@ -56,7 +57,7 @@ class FileDetailsPanel extends ConsumerWidget {
         child: Row(children: [
           FileIcon(kind: a.kind, size: 32),
           const SizedBox(width: 12),
-          Expanded(child: Text(a.nombre, style: theme.textTheme.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis)),
+          Expanded(child: Text(a.visible, style: theme.textTheme.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis)),
           IconButton(tooltip: 'Cerrar', icon: const Icon(Icons.close), onPressed: onCerrar),
         ]),
       ),
@@ -76,9 +77,9 @@ class FileDetailsPanel extends ConsumerWidget {
           const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: [
             FilledButton.tonalIcon(
-              icon: const Icon(Icons.open_in_new, size: 18),
+              icon: const Icon(Icons.visibility_outlined, size: 18),
               label: const Text('Abrir'),
-              onPressed: () => abrirVersion(context, ref, v, a.nombre, descargar: false),
+              onPressed: () => abrirArchivo(context, a),
             ),
             FilledButton.tonalIcon(
               icon: const Icon(Icons.download_rounded, size: 18),

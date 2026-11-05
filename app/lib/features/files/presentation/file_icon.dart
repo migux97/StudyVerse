@@ -9,6 +9,7 @@ class FileIcon extends StatelessWidget {
   final double size;
 
   static (IconData, Color) estilo(FileKind kind) => switch (kind) {
+        FileKind.studyverse => (Icons.article_rounded, const Color(0xFF1C8AD4)),
         FileKind.pdf => (Icons.picture_as_pdf_rounded, const Color(0xFFE5483B)),
         FileKind.documento => (Icons.description_rounded, const Color(0xFF3B78E7)),
         FileKind.planilla => (Icons.table_chart_rounded, const Color(0xFF1E9E5A)),
