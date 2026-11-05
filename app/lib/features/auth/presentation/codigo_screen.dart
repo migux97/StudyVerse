@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/forms/validar.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/auth_layout.dart';
 import '../domain/auth_repository.dart';
@@ -66,6 +67,7 @@ class _CodigoScreenState extends ConsumerState<CodigoScreen> {
   }
 
   Future<void> _enviar() async {
+    if (_cargando) return;
     setState(() => _errorEmail = null);
     if (!_enviado && !_formKey.currentState!.validate()) return;
     setState(() => _cargando = true);
@@ -89,6 +91,7 @@ class _CodigoScreenState extends ConsumerState<CodigoScreen> {
   }
 
   Future<void> _verificar() async {
+    if (_cargando) return;
     setState(() => _errorCodigo = null);
     if (!_formKey.currentState!.validate()) return;
     setState(() => _cargando = true);
@@ -142,14 +145,15 @@ class _CodigoScreenState extends ConsumerState<CodigoScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (!_enviado) ...[
-                TextFormField(
+                CampoEmail(
                   controller: _email,
                   autofocus: _email.text.isEmpty,
-                  decoration: InputDecoration(labelText: 'Email', errorText: _errorEmail),
-                  keyboardType: TextInputType.emailAddress,
-                  autofillHints: const [AutofillHints.email],
-                  onFieldSubmitted: (_) => _enviar(),
-                  validator: Validators.email,
+                  errorText: _errorEmail,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) => _enviar(),
+                  onChanged: (_) {
+                    if (_errorEmail != null) setState(() => _errorEmail = null);
+                  },
                 ),
                 const SizedBox(height: 24),
                 BotonPrincipal(texto: 'Mandame el código', cargando: _cargando, onPressed: _enviar),
@@ -166,10 +170,17 @@ class _CodigoScreenState extends ConsumerState<CodigoScreen> {
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(letterSpacing: 10),
                   decoration: InputDecoration(
-                    labelText: 'Código',
+                    labelText: 'Código de 6 números',
                     hintText: '••••••',
                     errorText: _errorCodigo,
+                    helperText: '¿No te llegó? Revisá la carpeta de spam',
                   ),
+                  autovalidateMode: validarAlCorregir,
+                  onChanged: (v) {
+                    if (_errorCodigo != null) setState(() => _errorCodigo = null);
+                    // Con el sexto número se verifica solo, como en Google.
+                    if (v.length == 6 && widget.motivo != MotivoCodigo.recuperar && !_cargando) _verificar();
+                  },
                   textInputAction:
                       widget.motivo == MotivoCodigo.recuperar ? TextInputAction.next : TextInputAction.done,
                   onFieldSubmitted: (_) => widget.motivo == MotivoCodigo.recuperar ? null : _verificar(),
@@ -183,6 +194,7 @@ class _CodigoScreenState extends ConsumerState<CodigoScreen> {
                     nueva: true,
                     onSubmitted: (_) => _verificar(),
                     validator: Validators.password,
+                    textInputAction: TextInputAction.done,
                   ),
                   RequisitosContrasena(controller: _password),
                 ],

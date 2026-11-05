@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/forms/validar.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/auth_layout.dart';
 import '../domain/group.dart';
@@ -105,20 +107,18 @@ class _GrupoFormDialogState extends State<_GrupoFormDialog> {
               ),
               textCapitalization: TextCapitalization.sentences,
               textInputAction: TextInputAction.next,
-              validator: (v) {
-                final t = v?.trim() ?? '';
-                if (t.isEmpty) return 'Poné un nombre';
-                if (t.length > 80) return 'Máximo 80 caracteres';
-                return null;
-              },
+              inputFormatters: [LengthLimitingTextInputFormatter(80)],
+              autovalidateMode: validarAlCorregir,
+              validator: Validar.texto(vacio: 'Ingresá un nombre para el grupo', max: 80),
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _materia,
-              decoration: const InputDecoration(labelText: 'Materia (opcional)'),
+              decoration: const InputDecoration(labelText: 'Materia (opcional)', hintText: 'Ej.: Física II'),
               textCapitalization: TextCapitalization.sentences,
+              inputFormatters: [LengthLimitingTextInputFormatter(80)],
               onFieldSubmitted: (_) => _ok(),
-              validator: (v) => (v?.trim().length ?? 0) > 80 ? 'Máximo 80 caracteres' : null,
+              validator: Validar.opcional(80),
             ),
           ]),
         ),
@@ -173,10 +173,16 @@ class _UnirseDialogState extends State<_UnirseDialog> {
               hintText: 'Ej.: ABCD-2345',
             ),
             textCapitalization: TextCapitalization.characters,
+            autocorrect: false,
+            enableSuggestions: false,
+            autovalidateMode: validarAlCorregir,
             onFieldSubmitted: (_) => _ok(),
-            validator: (v) => Invite.extraerCodigo(v ?? '') == null
-                ? 'El código tiene 8 letras y números, como ABCD-2345'
-                : null,
+            validator: (v) {
+              if ((v ?? '').trim().isEmpty) return 'Ingresá el código o pegá el link';
+              return Invite.extraerCodigo(v ?? '') == null
+                  ? 'Ingresá un código válido: 8 letras y números, como ABCD-2345'
+                  : null;
+            },
           ),
         ),
       ),

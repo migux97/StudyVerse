@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/forms/validar.dart';
 import '../domain/auth_repository.dart';
 import '../domain/validators.dart';
 import 'auth_providers.dart';
@@ -17,6 +19,7 @@ class CampoContrasena extends StatefulWidget {
     this.validator,
     this.errorText,
     this.onSubmitted,
+    this.onChanged,
     this.textInputAction,
   });
 
@@ -28,6 +31,7 @@ class CampoContrasena extends StatefulWidget {
   final String? Function(String?)? validator;
   final String? errorText;
   final ValueChanged<String>? onSubmitted;
+  final ValueChanged<String>? onChanged;
   final TextInputAction? textInputAction;
 
   @override
@@ -36,19 +40,53 @@ class CampoContrasena extends StatefulWidget {
 
 class _CampoContrasenaState extends State<CampoContrasena> {
   bool _ver = false;
+  bool _mayusculas = false;
+  final _foco = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_teclas);
+    _foco.addListener(_revisarMayusculas);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_teclas);
+    _foco.dispose();
+    super.dispose();
+  }
+
+  bool _teclas(KeyEvent _) {
+    _revisarMayusculas();
+    return false;
+  }
+
+  /// Aviso de Bloq Mayús, como en la pantalla de entrada de Google.
+  void _revisarMayusculas() {
+    final activo =
+        _foco.hasFocus && HardwareKeyboard.instance.lockModesEnabled.contains(KeyboardLockMode.capsLock);
+    if (activo != _mayusculas && mounted) setState(() => _mayusculas = activo);
+  }
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
       controller: widget.controller,
+      focusNode: _foco,
       obscureText: !_ver,
+      autocorrect: false,
+      enableSuggestions: false,
       autofillHints: [widget.nueva ? AutofillHints.newPassword : AutofillHints.password],
       textInputAction: widget.textInputAction,
       onFieldSubmitted: widget.onSubmitted,
+      onChanged: widget.onChanged,
       validator: widget.validator,
+      autovalidateMode: validarAlCorregir,
       decoration: InputDecoration(
         labelText: widget.etiqueta,
         errorText: widget.errorText,
+        helperText: _mayusculas ? 'Bloq Mayús está activado' : null,
         suffixIcon: IconButton(
           tooltip: _ver ? 'Ocultar contraseña' : 'Mostrar contraseña',
           icon: Icon(_ver ? Icons.visibility_off_outlined : Icons.visibility_outlined),
@@ -187,11 +225,14 @@ class CampoUsuarioState extends ConsumerState<CampoUsuario> {
       enableSuggestions: false,
       autofillHints: const [AutofillHints.newUsername],
       textInputAction: TextInputAction.next,
+      inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s')), _Minusculas()],
       onChanged: _alCambiar,
+      autovalidateMode: validarAlCorregir,
       validator: (v) =>
           Validators.username(v) ?? (_estado == _Disponibilidad.ocupado ? 'Ese usuario ya está en uso' : null),
       decoration: InputDecoration(
         labelText: 'Nombre de usuario',
+        hintText: 'ana.garcia',
         prefixText: '@',
         helperText: switch (_estado) {
           _Disponibilidad.libre => 'Está disponible',
@@ -206,6 +247,109 @@ class CampoUsuarioState extends ConsumerState<CampoUsuario> {
           _Disponibilidad.libre => Icon(Icons.check_circle_rounded, color: scheme.primary),
           _ => null,
         },
+      ),
+    );
+  }
+}
+
+class _Minusculas extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) =>
+      newValue.copyWith(text: newValue.text.toLowerCase());
+}
+
+/// Campo de email: ejemplo de formato, sin espacios ni autocorrector, y si el
+/// dominio parece mal escrito ("gmial.com") ofrece corregirlo con un toque.
+class CampoEmail extends StatelessWidget {
+  const CampoEmail({
+    super.key,
+    required this.controller,
+    this.errorText,
+    this.autofillHints = const [AutofillHints.email],
+    this.textInputAction = TextInputAction.next,
+    this.onSubmitted,
+    this.onChanged,
+    this.autofocus = false,
+  });
+
+  final TextEditingController controller;
+  final String? errorText;
+  final List<String> autofillHints;
+  final TextInputAction textInputAction;
+  final ValueChanged<String>? onSubmitted;
+  final ValueChanged<String>? onChanged;
+  final bool autofocus;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        final sugerencia = Validators.sugerenciaEmail(controller.text);
+        return TextFormField(
+          controller: controller,
+          autofocus: autofocus,
+          keyboardType: TextInputType.emailAddress,
+          autocorrect: false,
+          enableSuggestions: false,
+          autofillHints: autofillHints,
+          textInputAction: textInputAction,
+          inputFormatters: [FilteringTextInputFormatter.deny(RegExp(r'\s'))],
+          onFieldSubmitted: onSubmitted,
+          onChanged: onChanged,
+          validator: Validators.email,
+          autovalidateMode: validarAlCorregir,
+          decoration: InputDecoration(
+            labelText: 'Email',
+            hintText: Validators.emailEjemplo,
+            errorText: errorText,
+            helper: sugerencia == null
+                ? null
+                : _Sugerencia(
+                    texto: sugerencia,
+                    onTap: () {
+                      controller.value = TextEditingValue(
+                        text: sugerencia,
+                        selection: TextSelection.collapsed(offset: sugerencia.length),
+                      );
+                      onChanged?.call(sugerencia);
+                    },
+                  ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _Sugerencia extends StatelessWidget {
+  const _Sugerencia({required this.texto, required this.onTap});
+  final String texto;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final estilo = Theme.of(context).textTheme.bodySmall;
+    return Semantics(
+      button: true,
+      label: '¿Quisiste decir $texto?',
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Text.rich(TextSpan(style: estilo, children: [
+          const TextSpan(text: '¿Quisiste decir '),
+          TextSpan(
+            text: texto,
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline),
+          ),
+          const TextSpan(text: '?'),
+        ])),
+        ),
       ),
     );
   }

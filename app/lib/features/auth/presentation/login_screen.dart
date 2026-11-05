@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/auth_layout.dart';
 import '../domain/auth_repository.dart';
-import '../domain/validators.dart';
 import 'auth_providers.dart';
 import 'campos.dart';
 import 'google_button.dart';
@@ -31,6 +30,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _email.dispose();
     _password.dispose();
     super.dispose();
+  }
+
+  void _limpiarError() {
+    if (_errorPassword != null) setState(() => _errorPassword = null);
   }
 
   String? get _from => GoRouterState.of(context).uri.queryParameters['from'];
@@ -70,19 +73,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextFormField(
+              CampoEmail(
                 controller: _email,
-                decoration: const InputDecoration(labelText: 'Email'),
-                keyboardType: TextInputType.emailAddress,
                 autofillHints: const [AutofillHints.email, AutofillHints.username],
-                textInputAction: TextInputAction.next,
-                validator: Validators.email,
+                onChanged: (_) => _limpiarError(),
               ),
               const SizedBox(height: 16),
               CampoContrasena(
                 controller: _password,
                 errorText: _errorPassword,
                 onSubmitted: (_) => _entrar(),
+                onChanged: (_) => _limpiarError(),
                 validator: (v) => (v ?? '').isEmpty ? 'Ingresá tu contraseña' : null,
               ),
               Align(

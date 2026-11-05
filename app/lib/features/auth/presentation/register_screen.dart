@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/auth_layout.dart';
 import '../domain/auth_repository.dart';
+import '../../../core/forms/validar.dart';
 import '../domain/validators.dart';
 import 'auth_providers.dart';
 import 'campos.dart';
@@ -83,22 +84,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             children: [
               TextFormField(
                 controller: _nombre,
-                decoration: const InputDecoration(labelText: 'Nombre y apellido'),
+                decoration: const InputDecoration(labelText: 'Nombre y apellido', hintText: 'Ana García'),
                 textCapitalization: TextCapitalization.words,
                 autofillHints: const [AutofillHints.name],
                 textInputAction: TextInputAction.next,
+                autovalidateMode: validarAlCorregir,
                 validator: Validators.nombre,
               ),
               const SizedBox(height: 16),
               CampoUsuario(key: _campoUsuario, controller: _usuario),
               const SizedBox(height: 16),
-              TextFormField(
+              CampoEmail(
                 controller: _email,
-                decoration: InputDecoration(labelText: 'Email', errorText: _errorEmail),
-                keyboardType: TextInputType.emailAddress,
-                autofillHints: const [AutofillHints.email],
-                textInputAction: TextInputAction.next,
-                validator: Validators.email,
+                errorText: _errorEmail,
+                onChanged: (_) {
+                  if (_errorEmail != null) setState(() => _errorEmail = null);
+                },
               ),
               const SizedBox(height: 16),
               CampoContrasena(
@@ -116,7 +117,12 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 onSubmitted: (_) => _registrar(),
                 validator: Validators.confirmarPassword(() => _password.text),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              Text(
+                'Tus compañeros de grupo van a ver tu nombre, tu usuario y tu foto.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 16),
               BotonPrincipal(texto: 'Crear cuenta', cargando: _cargando, onPressed: _registrar),
               const SizedBox(height: 16),
               const GoogleButton(),

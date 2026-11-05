@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyverse/core/config/env.dart';
+import 'package:studyverse/core/forms/validar.dart';
 import 'package:studyverse/core/router/app_router.dart';
 import 'package:studyverse/features/auth/data/supabase_auth_repository.dart';
 import 'package:studyverse/features/auth/domain/cuenta.dart';
@@ -8,16 +9,33 @@ import 'package:studyverse/features/auth/domain/validators.dart';
 
 void main() {
   group('Validators', () {
-    test('email', () {
+    test('email: dice qué le falta, con ejemplo', () {
       expect(Validators.email(''), 'Ingresá tu email');
-      expect(Validators.email('ana@'), 'Revisá el email, parece incompleto');
+      expect(Validators.email('ana'), 'Falta el @ en el email');
+      expect(Validators.email('ana@'), 'Falta lo que va después del @, como gmail.com');
+      expect(Validators.email('@gmail.com'), 'Falta lo que va antes del @');
+      expect(Validators.email('ana@gmail'), 'Al email le falta el final, como .com');
+      expect(Validators.email('ana@@gmail.com'), 'El email tiene más de un @');
+      expect(Validators.email('ana lopez@gmail.com'), 'El email no puede tener espacios');
+      expect(Validators.email('ana..lopez@gmail.com'), 'Ingresá un email válido, como nombre@ejemplo.com');
+      expect(Validators.email('ana@gmail.c'), 'Ingresá un email válido, como nombre@ejemplo.com');
       expect(Validators.email(' ana@uni.edu.ar '), isNull);
+      expect(Validators.email('ana.lopez+tp@gmail.com'), isNull);
+    });
+
+    test('email: sugiere el dominio bien escrito', () {
+      expect(Validators.sugerenciaEmail('Ana@gmial.com'), 'Ana@gmail.com');
+      expect(Validators.sugerenciaEmail('ana@hotmial.com'), 'ana@hotmail.com');
+      expect(Validators.sugerenciaEmail('ana@gmail.com'), isNull);
+      expect(Validators.sugerenciaEmail('ana@'), isNull);
     });
 
     test('password: pide 8 caracteres, minúscula, mayúscula y número', () {
-      expect(Validators.password(''), 'Elegí una contraseña');
-      expect(Validators.password('abc'), 'Le falta: 8 caracteres, una mayúscula, un número');
-      expect(Validators.password('abcdefgh1'), 'Le falta: una mayúscula');
+      expect(Validators.password(''), 'Ingresá una contraseña');
+      expect(Validators.password('abc'), 'Usá 8 caracteres o más');
+      expect(Validators.password('abcdefgh'), 'La contraseña necesita una mayúscula y un número');
+      expect(Validators.password('abcdefgh1'), 'La contraseña necesita una mayúscula');
+      expect(Validators.password('Aa1${'x' * 70}'), 'Usá 72 caracteres como máximo');
       expect(Validators.password('Abcdefg1'), isNull);
     });
 
@@ -28,30 +46,54 @@ void main() {
 
     test('username', () {
       expect(Validators.username(''), 'Elegí un nombre de usuario');
-      expect(Validators.username('ab'), 'Usá al menos 3 caracteres');
-      expect(Validators.username('a' * 21), 'Usá hasta 20 caracteres');
-      expect(Validators.username('ana maria'), 'Solo letras, números, punto y guion bajo');
-      expect(Validators.username('.ana'), 'Tiene que empezar y terminar con letra o número');
+      expect(Validators.username('ab'), 'Usá 3 caracteres o más');
+      expect(Validators.username('a' * 21), 'Usá 20 caracteres como máximo');
+      expect(Validators.username('ana maria'), 'Usá solo letras, números, punto (.) y guion bajo (_)');
+      expect(Validators.username('.ana'), 'Tiene que empezar y terminar con una letra o un número');
       expect(Validators.username('ana..m'), 'No pongas dos símbolos seguidos');
       expect(Validators.username('Ana.Lopez_2'), isNull, reason: 'las mayúsculas se pasan a minúsculas');
     });
 
     test('código de 6 números', () {
-      expect(Validators.codigo(''), 'Ingresá el código del correo');
-      expect(Validators.codigo('12a456'), 'Son 6 números');
+      expect(Validators.codigo(''), 'Ingresá el código');
+      expect(Validators.codigo('12a456'), 'El código tiene solo números');
+      expect(Validators.codigo('12345'), 'El código tiene 6 números');
       expect(Validators.codigo('123 456'), isNull);
     });
 
     test('nombre', () {
       expect(Validators.nombre('   '), 'Ingresá tu nombre');
-      expect(Validators.nombre('a' * 81), 'Usá hasta 80 caracteres');
+      expect(Validators.nombre('A'), 'El nombre es muy corto');
+      expect(Validators.nombre('a' * 81), 'Usá 80 caracteres como máximo');
+      expect(Validators.nombre('123'), 'Ingresá un nombre válido, como Ana García');
+      expect(Validators.nombre('Grupo 4 & Co.'), isNull);
       expect(Validators.nombre('Ana'), isNull);
+      expect(Validators.nombre("José O'Connor-Núñez"), isNull);
     });
 
     test('confirmar contraseña', () {
       final v = Validators.confirmarPassword(() => 'secreto123');
-      expect(v('otra'), 'No coincide con la contraseña');
+      expect(v(''), 'Confirmá la contraseña');
+      expect(v('otra'), 'Las contraseñas no coinciden. Probá de nuevo');
       expect(v('secreto123'), isNull);
+    });
+  });
+
+  group('Validar', () {
+    test('texto obligatorio con largo máximo', () {
+      final v = Validar.texto(vacio: 'Ingresá un nombre para el grupo', max: 5);
+      expect(v('  '), 'Ingresá un nombre para el grupo');
+      expect(v('123456'), 'Usá 5 caracteres como máximo');
+      expect(v('TP 2'), isNull);
+    });
+
+    test('nombre de archivo', () {
+      final v = Validar.nombreArchivo();
+      expect(v(''), 'Ingresá un nombre');
+      expect(v('TP: final'), r'No uses estos caracteres: / \ : * ? " < > |');
+      expect(v('.oculto'), 'El nombre no puede empezar con un punto');
+      expect(v('Informe.'), 'El nombre no puede terminar con un punto');
+      expect(v('Informe final.docx'), isNull);
     });
   });
 

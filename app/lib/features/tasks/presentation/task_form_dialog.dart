@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/forms/validar.dart';
 import '../../files/domain/folder_tree.dart';
 import '../../files/presentation/files_providers.dart';
 import '../../groups/presentation/groups_providers.dart';
@@ -102,12 +104,9 @@ class _TareaDialogState extends ConsumerState<_TareaDialog> {
                   hintText: 'Ej.: Escribir la conclusión',
                 ),
                 textCapitalization: TextCapitalization.sentences,
-                validator: (v) {
-                  final t = v?.trim() ?? '';
-                  if (t.isEmpty) return 'Escribí la tarea';
-                  if (t.length > 200) return 'Máximo 200 caracteres';
-                  return null;
-                },
+                inputFormatters: [LengthLimitingTextInputFormatter(200)],
+                autovalidateMode: validarAlCorregir,
+                validator: Validar.texto(vacio: 'Escribí qué hay que hacer', max: 200),
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String?>(

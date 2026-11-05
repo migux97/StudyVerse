@@ -39,7 +39,7 @@ void main() {
     await tester.pumpWidget(app(MotivoCodigo.entrar, email: 'nadie@uni.edu.ar'));
     await tester.tap(find.text('Mandame el código'));
     await tester.pump();
-    expect(find.text('Código'), findsOneWidget);
+    expect(find.text('Código de 6 números'), findsOneWidget);
     expect(find.textContaining('No encontramos'), findsNothing);
     await tester.pump(const Duration(seconds: 31));
   });
@@ -50,8 +50,8 @@ void main() {
     await tester.pumpWidget(app(MotivoCodigo.registro, email: 'ana@uni.edu.ar'));
 
     expect(find.text('Confirmá tu email'), findsOneWidget);
-    await tester.enterText(find.widgetWithText(TextFormField, 'Código'), '123456');
-    await tester.tap(find.text('Confirmar'));
+    // Con el sexto número se verifica solo, sin tocar "Confirmar".
+    await tester.enterText(find.widgetWithText(TextFormField, 'Código de 6 números'), '123456');
     await tester.pump();
 
     verify(() => repo.verificarCodigo('ana@uni.edu.ar', '123456', MotivoCodigo.registro)).called(1);
@@ -70,11 +70,11 @@ void main() {
 
     expect(find.text('Contraseña nueva'), findsOneWidget);
     expect(find.text('Una mayúscula'), findsOneWidget);
-    await tester.enterText(find.widgetWithText(TextFormField, 'Código'), '123456');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Código de 6 números'), '123456');
     await tester.enterText(find.widgetWithText(TextFormField, 'Contraseña nueva'), 'corta');
     await tester.tap(find.text('Cambiar contraseña'));
     await tester.pump();
-    expect(find.textContaining('Le falta'), findsOneWidget);
+    expect(find.text('Usá 8 caracteres o más'), findsOneWidget);
     verifyNever(() => repo.verificarCodigo(any(), any(), any(), nuevaPassword: any(named: 'nuevaPassword')));
     await tester.pump(const Duration(seconds: 31));
   });

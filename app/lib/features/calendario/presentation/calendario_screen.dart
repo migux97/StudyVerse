@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/forms/validar.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/auth_layout.dart';
 import '../../../core/widgets/pagina.dart';
@@ -400,13 +402,11 @@ class _EventoDialogState extends ConsumerState<_EventoDialog> {
               TextFormField(
                 controller: _titulo,
                 autofocus: true,
-                decoration: const InputDecoration(labelText: 'Qué es', hintText: 'Primer parcial'),
-                validator: (v) {
-                  final t = v?.trim() ?? '';
-                  if (t.isEmpty) return 'Ponele un nombre';
-                  if (t.length > 120) return 'Usá hasta 120 caracteres';
-                  return null;
-                },
+                decoration: const InputDecoration(labelText: 'Qué es', hintText: 'Ej.: Primer parcial'),
+                textCapitalization: TextCapitalization.sentences,
+                inputFormatters: [LengthLimitingTextInputFormatter(120)],
+                autovalidateMode: validarAlCorregir,
+                validator: Validar.texto(vacio: 'Ingresá un nombre, como Primer parcial', max: 120),
               ),
               const SizedBox(height: 12),
               Row(children: [
@@ -440,7 +440,7 @@ class _EventoDialogState extends ConsumerState<_EventoDialog> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _nota,
-                decoration: const InputDecoration(labelText: 'Nota (opcional)', hintText: 'Aula 204 · temas 1 a 4'),
+                decoration: const InputDecoration(labelText: 'Nota (opcional)', hintText: 'Ej.: Aula 204 · temas 1 a 4'),
                 maxLength: 500,
               ),
             ]),

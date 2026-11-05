@@ -1,6 +1,6 @@
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -55,6 +55,8 @@ class ProfileScreen extends ConsumerWidget {
                               titulo: 'Tu nombre',
                               etiqueta: 'Nombre y apellido',
                               inicial: p.nombre,
+                              ejemplo: 'Ana García',
+                              maximo: 80,
                               validator: Validators.nombre,
                               cambios: (v) => CambiosPerfil(nombre: v)),
                         ),
@@ -73,6 +75,8 @@ class ProfileScreen extends ConsumerWidget {
                               titulo: 'Tu carrera',
                               etiqueta: 'Carrera',
                               inicial: p.carrera,
+                              ejemplo: 'Ej.: Ingeniería en Sistemas',
+                              maximo: 80,
                               validator: Validators.opcional,
                               cambios: (v) => CambiosPerfil(carrera: v)),
                         ),
@@ -85,6 +89,8 @@ class ProfileScreen extends ConsumerWidget {
                               titulo: 'Tu universidad',
                               etiqueta: 'Universidad o instituto',
                               inicial: p.universidad,
+                              ejemplo: 'Ej.: UTN FRBA',
+                              maximo: 80,
                               validator: Validators.opcional,
                               cambios: (v) => CambiosPerfil(universidad: v)),
                         ),
@@ -140,11 +146,19 @@ class ProfileScreen extends ConsumerWidget {
     required String titulo,
     required String etiqueta,
     String? inicial,
+    String? ejemplo,
+    int? maximo,
     required String? Function(String?) validator,
     required CambiosPerfil Function(String) cambios,
   }) async {
     final nuevo = await pedirTexto(context,
-        titulo: titulo, etiqueta: etiqueta, accion: 'Guardar', inicial: inicial, validator: validator);
+        titulo: titulo,
+        etiqueta: etiqueta,
+        accion: 'Guardar',
+        inicial: inicial,
+        ejemplo: ejemplo,
+        maximo: maximo,
+        validator: validator);
     if (nuevo == null || nuevo == (inicial ?? '') || !context.mounted) return;
     final error = await ref.read(currentProfileProvider.notifier).actualizar(cambios(nuevo));
     if (context.mounted) mostrarMensaje(context, error ?? 'Guardado', error: error != null);
@@ -175,8 +189,12 @@ class ProfileScreen extends ConsumerWidget {
         final codigo = await pedirTexto(
           context,
           titulo: 'Confirmá que sos vos',
-          etiqueta: 'Código que te mandamos por mail',
+          etiqueta: 'Código de 6 números',
+          ayuda: 'Te lo mandamos por mail. Si no lo ves, revisá la carpeta de spam',
           accion: 'Confirmar',
+          teclado: TextInputType.number,
+          maximo: 6,
+          formatos: [FilteringTextInputFormatter.digitsOnly],
           validator: Validators.codigo,
         );
         if (codigo == null) return;
@@ -501,7 +519,7 @@ class _ContrasenaDialogState extends State<_ContrasenaDialog> {
             const SizedBox(height: 16),
             CampoContrasena(
               controller: _repetir,
-              etiqueta: 'Repetila',
+              etiqueta: 'Confirmá la contraseña',
               nueva: true,
               onSubmitted: (_) => _ok(),
               validator: Validators.confirmarPassword(() => _nueva.text),

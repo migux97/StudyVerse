@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../core/forms/validar.dart';
 import '../../../core/web/ventana.dart';
 import '../../../core/widgets/auth_layout.dart';
 import '../../../core/widgets/confirm_dialog.dart';
@@ -29,12 +30,7 @@ Future<bool> _intentar(BuildContext context, Future<void> Function() accion) asy
   }
 }
 
-String? _validarNombre(String? v) {
-  final t = v?.trim() ?? '';
-  if (t.isEmpty) return 'Poné un nombre';
-  if (t.length > 120) return 'Máximo 120 caracteres';
-  return null;
-}
+final _validarNombre = Validar.nombreArchivo(vacio: 'Ingresá un nombre para la carpeta');
 
 // Carpetas ---------------------------------------------------------------------
 
@@ -45,6 +41,7 @@ Future<void> nuevaCarpeta(BuildContext context, WidgetRef ref, String groupId, S
     etiqueta: 'Nombre',
     accion: 'Crear',
     inicial: 'Carpeta sin nombre',
+    maximo: 120,
     validator: _validarNombre,
   );
   if (nombre == null || !context.mounted) return;
@@ -61,6 +58,7 @@ Future<void> renombrarCarpeta(BuildContext context, WidgetRef ref, Folder carpet
     etiqueta: 'Nombre',
     accion: 'Guardar',
     inicial: carpeta.nombre,
+    maximo: 120,
     validator: _validarNombre,
   );
   if (nombre == null || nombre == carpeta.nombre || !context.mounted) return;
@@ -369,12 +367,8 @@ Future<void> renombrarArchivo(BuildContext context, WidgetRef ref, FileItem arch
     accion: 'Guardar',
     inicial: archivo.nombre,
     seleccionarSinExtension: true,
-    validator: (v) {
-      final t = v?.trim() ?? '';
-      if (t.isEmpty) return 'Poné un nombre';
-      if (t.length > 255) return 'Máximo 255 caracteres';
-      return null;
-    },
+    maximo: 255,
+    validator: Validar.nombreArchivo(max: 255),
   );
   if (nombre == null || nombre == archivo.nombre || !context.mounted) return;
   await _intentar(context, () async {
