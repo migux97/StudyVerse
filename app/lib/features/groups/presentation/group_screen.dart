@@ -15,6 +15,8 @@ import '../../files/presentation/file_details_panel.dart';
 import '../../files/presentation/files_providers.dart';
 import '../../files/presentation/uploads_panel.dart';
 import '../domain/group.dart';
+import '../../documentos/presentation/nuevo_documento.dart';
+import '../../files/presentation/file_icon.dart';
 import 'group_shell.dart';
 
 /// Explorador de un grupo: carpetas y archivos, estilo Drive.
@@ -194,6 +196,15 @@ class _ExploradorState extends ConsumerState<_Explorador> {
               Navigator.pop(ctx);
               elegirYSubir(context, ref,
                   groupId: grupo.id, folderId: folderId, existentes: existentes, miId: miId);
+            },
+          ),
+          ListTile(
+            leading: const FileIcon(kind: FileKind.studyverse, size: 24),
+            title: const Text('Documento'),
+            subtitle: const Text('Escribí en equipo, como en Word'),
+            onTap: () {
+              Navigator.pop(ctx);
+              nuevoDocumento(context, ref, groupId: grupo.id, folderId: folderId, existentes: existentes);
             },
           ),
           ListTile(

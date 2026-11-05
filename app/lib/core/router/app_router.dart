@@ -12,6 +12,7 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/profile_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/activity/presentation/activity_screen.dart';
+import '../../features/documentos/presentation/documento_screen.dart';
 import '../../features/groups/presentation/group_screen.dart';
 import '../../features/groups/presentation/groups_screen.dart';
 import '../../features/groups/presentation/join_group_screen.dart';
@@ -19,6 +20,7 @@ import '../../features/groups/presentation/members_screen.dart';
 import '../../features/groups/presentation/telegram_screen.dart';
 import '../../features/tasks/presentation/contributions_screen.dart';
 import '../../features/tasks/presentation/tasks_screen.dart';
+import '../../features/visor/presentation/visor_screen.dart';
 
 class Routes {
   static const login = '/login';
@@ -37,6 +39,8 @@ class Routes {
   static String actividad(String id) => '/grupos/$id/actividad';
   static String aportes(String id) => '/grupos/$id/aportes';
   static String telegram(String id) => '/grupos/$id/telegram';
+  static String archivo(String grupoId, String fileId) => '/grupos/$grupoId/archivos/$fileId';
+  static String documento(String grupoId, String fileId) => '/grupos/$grupoId/documentos/$fileId';
   static String unirse(String codigo) => '/unirse/$codigo';
 
   static const publicas = {login, registro};
@@ -99,6 +103,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'miembros',
             builder: (_, s) => MembersScreen(groupId: s.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: 'archivos/:fileId',
+            builder: (_, s) => VisorScreen(groupId: s.pathParameters['id']!, fileId: s.pathParameters['fileId']!),
+          ),
+          GoRoute(
+            path: 'documentos/:fileId',
+            builder: (_, s) => DocumentoScreen(groupId: s.pathParameters['id']!, fileId: s.pathParameters['fileId']!),
           ),
           GoRoute(
             path: 'telegram',
