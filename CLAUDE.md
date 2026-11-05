@@ -74,6 +74,8 @@ Usuarios de prueba del seed: `ana@studyverse.test` y `juan@studyverse.test` (con
 - En el editor, el `QuillController` se crea una vez y el documento se reemplaza solo desde `ref.listen` (en lectura); nunca reemplazarlo en cada build.
 - Papelera: los archivos tienen `deleted_at`. Toda consulta de archivos "vivos" filtra `deleted_at is null` (lista, búsqueda, subir por nombre, destacados). Lo de la papelera no se puede modificar (trigger) y sus objetos de Storage no se pueden leer una vez eliminados para siempre.
 - Comentarios y eventos: el cliente solo puede insertar ciertas columnas (grants por columna); `menciones`, `id` y `created_at` los pone la base.
+- Formularios: validadores en `auth/domain/validators.dart` (cuenta) y `core/forms/validar.dart` (general). Cada campo lleva ejemplo (`hintText`, "Ej.: …") y `autovalidateMode: validarAlCorregir`; el email usa `CampoEmail`.
 - Textos: cortos y naturales, como en Drive ("Algo salió mal. Probá de nuevo", no "No se pudo completar la operación"). Los errores de un campo van en el campo (`errorText`); los avisos sueltos, con `mostrarMensaje`, que nunca usa rojo.
+- Correos de Auth: en local van a Mailpit. Con `SUPABASE_AUTH_EMAIL_SMTP_ENABLED=true` y `SMTP_*` en `supabase/.env` salen de verdad (config `[auth.email.smtp]`); hace falta `supabase stop` y `start`.
 - Auth manda como mucho un correo cada 30 s por email (`max_frequency`): pedir un código de entrada y enseguida uno de recuperación hace que el segundo no salga.
 - Los errores de Auth llegan como `AuthFailure` con `codigo` (`invalid_credentials`, `otp_expired`…): decidir dónde mostrarlos por el código, no por el texto.

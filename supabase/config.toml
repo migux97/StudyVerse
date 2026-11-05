@@ -234,15 +234,18 @@ otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 900
 
-# Use a production-ready SMTP server
-# [auth.email.smtp]
-# enabled = true
-# host = "smtp.sendgrid.net"
-# port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+# Envío real de correos (por ejemplo, Gmail). Apagado por defecto: los correos
+# quedan en Mailpit (http://127.0.0.1:54324). Para mandarlos de verdad, poné en
+# supabase/.env SUPABASE_AUTH_EMAIL_SMTP_ENABLED=true y los datos SMTP_* (ver
+# supabase/.env.example) y reiniciá con `npx supabase stop` y `npx supabase start`.
+[auth.email.smtp]
+enabled = false
+host = "env(SMTP_HOST)"
+port = 587
+user = "env(SMTP_USER)"
+pass = "env(SMTP_PASS)"
+admin_email = "env(SMTP_USER)"
+sender_name = "StudyVerse"
 
 # Correos de StudyVerse: todos mandan un código de 6 dígitos (sirve igual en
 # la web y en la app, sin depender de links).

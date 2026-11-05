@@ -68,6 +68,17 @@ Usuarios de prueba del seed: `ana@studyverse.test` y `juan@studyverse.test` (con
 
 Los correos (códigos de registro, de entrada y de recuperación) no salen a internet en local: se ven en Mailpit, http://127.0.0.1:54324.
 
+Para que lleguen de verdad (por ejemplo, a tu Gmail), copiá `supabase/.env.example` a `supabase/.env` y completá:
+
+```
+SUPABASE_AUTH_EMAIL_SMTP_ENABLED=true
+SMTP_HOST=smtp.gmail.com
+SMTP_USER=tu.cuenta@gmail.com
+SMTP_PASS=<contraseña de aplicación de 16 letras>
+```
+
+Con Gmail, la contraseña es una *contraseña de aplicación* (necesita la verificación en dos pasos): https://myaccount.google.com/apppasswords. Después, `npx supabase stop` y `npx supabase start`. Gmail permite unos 500 correos por día.
+
 ### 2. App
 
 ```bash
