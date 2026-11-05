@@ -15,12 +15,16 @@ abstract final class Canales {
   static String telegram(String groupId) => 'grupo:$groupId:telegram';
   static String documentos(String groupId) => 'grupo:$groupId:documentos';
   static String comentarios(String groupId) => 'grupo:$groupId:comentarios';
+  static String avisos(String groupId) => 'grupo:$groupId:avisos';
   static String misGrupos(String userId) => 'usuario:$userId:grupos';
   static String pedidos(String userId) => 'usuario:$userId:pedidos';
   static String menciones(String userId) => 'usuario:$userId:menciones';
 
   /// Revisiones de mis entregas (aprobada o con cambios pedidos).
   static String tareasDe(String userId) => 'usuario:$userId:tareas';
+
+  /// Avisos del docente y devoluciones de mis tareas.
+  static String avisosDe(String userId) => 'usuario:$userId:avisos';
 }
 
 /// Emite el payload de cada aviso `evento` que llega a `canal`.

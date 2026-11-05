@@ -18,6 +18,7 @@ import '../domain/group.dart';
 import '../../documentos/presentation/nuevo_documento.dart';
 import '../../files/presentation/file_icon.dart';
 import 'group_shell.dart';
+import '../../avisos/presentation/avisos_widgets.dart';
 
 /// Explorador de un grupo: carpetas y archivos, estilo Drive.
 /// [folderId] null = raíz del grupo.
@@ -126,6 +127,7 @@ class _ExploradorState extends ConsumerState<_Explorador> {
     final explorador = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (folderId == null) AvisosDelGrupo(grupo: grupo),
         _Breadcrumbs(grupo: grupo, ruta: ruta, onTap: _abrirCarpeta),
         Expanded(
           child: carpetaNoExiste

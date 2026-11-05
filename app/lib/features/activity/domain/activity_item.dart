@@ -67,6 +67,8 @@ class ActivityItem {
     'evento_creado' => '${v('agregó', 'agregaste')} ${p['titulo']} al calendario',
     'carpeta_creada' => '${v('creó', 'creaste')} la carpeta $nombre',
     'miembro_unido' => v('se unió al grupo', 'te uniste al grupo'),
+    'aviso_docente' => '${v('mandó', 'mandaste')} un aviso',
+    'devolucion' => '${v('dejó', 'dejaste')} una devolución en "$titulo"',
     'curso_sumado' => '${v('sumó', 'sumaste')} el grupo al curso "${p['curso'] ?? ''}"',
     'curso_quitado' => '${v('quitó', 'quitaste')} el grupo del curso "${p['curso'] ?? ''}"',
     'miembro_salio' when p['por'] != null => v('fue quitado del grupo por ${p['por']}', 'fuiste quitado del grupo por ${p['por']}'),

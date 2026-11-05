@@ -14,6 +14,7 @@ import '../domain/task.dart';
 import '../domain/tasks_repository.dart';
 import 'task_form_dialog.dart';
 import 'tasks_providers.dart';
+import '../../avisos/presentation/avisos_widgets.dart';
 
 class TasksScreen extends StatelessWidget {
   const TasksScreen({super.key, required this.groupId});
@@ -402,6 +403,7 @@ class _TareaTile extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         tile,
+        DevolucionesDeTarea(taskId: tarea.id, grupo: grupo, miId: miId),
         // El admin revisa desde acá (fuera del ListTile, para que entre en el celular).
         if (tarea.entregada && grupo.soyAdmin)
           Padding(

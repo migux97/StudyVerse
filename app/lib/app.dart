@@ -15,6 +15,9 @@ import 'features/files/domain/files_repository.dart';
 import 'features/files/presentation/files_providers.dart';
 import 'features/tasks/domain/task.dart';
 import 'features/tasks/presentation/tasks_providers.dart';
+import 'features/avisos/domain/aviso.dart';
+import 'features/avisos/presentation/avisos_providers.dart';
+import 'features/groups/presentation/groups_providers.dart';
 
 /// Para mostrar avisos que no dependen de la pantalla actual.
 class StudyVerseApp extends ConsumerWidget {
@@ -31,6 +34,9 @@ class StudyVerseApp extends ConsumerWidget {
     });
     ref.listen(revisionesProvider, (_, next) {
       if (next.value case final r?) _avisarRevision(ref, r);
+    });
+    ref.listen(avisosEntrantesProvider, (_, next) {
+      if (next.value case final a?) _avisarDocente(ref, a);
     });
 
     return MaterialApp.router(
@@ -69,6 +75,37 @@ class StudyVerseApp extends ConsumerWidget {
         cerrable: true,
         accion: 'Ver',
         alTocar: () => ref.read(routerProvider).push(destino),
+      ));
+  }
+
+  /// Aviso del docente o devolución de una tarea: llega en cualquier pantalla.
+  void _avisarDocente(WidgetRef ref, AvisoEntrante a) {
+    final ctx = scaffoldMessengerKey.currentContext;
+    final messenger = scaffoldMessengerKey.currentState;
+    if (ctx == null || messenger == null) return;
+    final (texto, destino) = switch (a) {
+      AvisoNuevo(:final aviso, :final groupId) => (
+          a.mensaje,
+          // A todo el curso: se abre mi grupo de ese curso.
+          groupId ??
+              ref.read(myGroupsProvider).value?.where((g) => g.cursoId == aviso.cursoId).firstOrNull?.id,
+        ),
+      DevolucionNueva(:final devolucion) => (a.mensaje, devolucion.groupId),
+    };
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(aviso(
+        ctx,
+        texto.length > 140 ? '${texto.substring(0, 140)}…' : texto,
+        duracion: const Duration(seconds: 12),
+        cerrable: true,
+        accion: 'Ver',
+        // Si todavía no sé en cuál de mis grupos está, voy al inicio.
+        alTocar: () => ref.read(routerProvider).push(switch (destino) {
+          null => Routes.grupos,
+          final id when a is DevolucionNueva => Routes.tareas(id),
+          final id => Routes.grupo(id),
+        }),
       ));
   }
 

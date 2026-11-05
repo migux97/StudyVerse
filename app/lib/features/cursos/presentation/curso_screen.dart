@@ -11,6 +11,9 @@ import '../../groups/presentation/group_shell.dart' show Aviso;
 import '../domain/curso.dart';
 import 'cursos_providers.dart';
 import 'inicio_docente.dart';
+import '../../avisos/domain/aviso.dart';
+import '../../avisos/presentation/avisos_providers.dart';
+import '../../avisos/presentation/avisos_widgets.dart';
 
 /// Un curso del docente: su código y los grupos que se sumaron.
 class CursoScreen extends ConsumerWidget {
@@ -86,7 +89,10 @@ class CursoScreen extends ConsumerWidget {
             accion: FilledButton(onPressed: () => ref.invalidate(cursoProvider(cursoId)), child: const Text('Reintentar')),
           ),
         AsyncValue(value: final Curso c) => RefreshIndicator(
-            onRefresh: () => ref.refresh(gruposDelCursoProvider(cursoId).future),
+            onRefresh: () {
+              ref.invalidate(avisosDelCursoProvider(cursoId));
+              return ref.refresh(gruposDelCursoProvider(cursoId).future);
+            },
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
               children: [
@@ -110,6 +116,8 @@ class CursoScreen extends ConsumerWidget {
                           });
                         },
                       ),
+                      const SizedBox(height: 16),
+                      _AvisosDelCurso(curso: c, grupos: grupos.value ?? const []),
                       const SizedBox(height: 16),
                       ...switch (grupos) {
                         AsyncValue(value: final List<GrupoDelCurso> gs) when gs.isEmpty => [
@@ -232,6 +240,64 @@ class _GrupoCard extends StatelessWidget {
             ],
           ]),
         ),
+      ),
+    );
+  }
+}
+
+/// Avisos del curso: mandar uno (a todos o a un grupo) y ver los anteriores.
+class _AvisosDelCurso extends ConsumerWidget {
+  const _AvisosDelCurso({required this.curso, required this.grupos});
+  final Curso curso;
+  final List<GrupoDelCurso> grupos;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final nombres = {for (final g in grupos) g.id: g.nombre};
+    final avisos = [
+      for (final a in ref.watch(avisosDelCursoProvider(curso.id)).value ?? const <AvisoDocente>[])
+        a.conGrupo(a.groupId == null ? null : nombres[a.groupId]),
+    ];
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Wrap(spacing: 12, runSpacing: 8, alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, children: [
+            Text('Avisos', style: theme.textTheme.titleSmall),
+            FilledButton.icon(
+              icon: const Icon(Icons.campaign_outlined, size: 18),
+              label: const Text('Mandar un aviso'),
+              onPressed: () => mandarAviso(
+                context,
+                ref,
+                cursoId: curso.id,
+                grupos: [for (final g in grupos) (id: g.id, nombre: g.nombre)],
+              ),
+            ),
+          ]),
+          if (avisos.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text('Mandá avisos a todo el curso o a un grupo: les llegan al instante.',
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+            )
+          else
+            ListaAvisos(
+              avisos: avisos.take(5).toList(),
+              onBorrar: (a) async {
+                final ok = await confirmar(context,
+                    titulo: '¿Borrar el aviso?', mensaje: a.texto, accion: 'Borrar', peligroso: true);
+                if (!ok || !context.mounted) return;
+                try {
+                  await ref.read(avisosRepositoryProvider).borrar(a.id);
+                  ref.invalidate(avisosDelCursoProvider(curso.id));
+                } on AvisosFailure catch (e) {
+                  if (context.mounted) mostrarMensaje(context, e.mensaje, error: true);
+                }
+              },
+            ),
+        ]),
       ),
     );
   }

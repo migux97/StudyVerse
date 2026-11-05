@@ -90,6 +90,8 @@ class _EventoTile extends StatelessWidget {
         'tarea_creada' || 'tarea_asignada' => Icons.add_task,
         'tarea_completada' || 'tarea_aprobada' => Icons.task_alt,
         'tarea_entregada' => Icons.outbox_outlined,
+        'aviso_docente' => Icons.campaign_outlined,
+        'devolucion' => Icons.rate_review_outlined,
         'tarea_cambios_pedidos' => Icons.rate_review_outlined,
         'liberacion_pedida' => Icons.front_hand_outlined,
         'telegram_vinculado' => Icons.send_outlined,
