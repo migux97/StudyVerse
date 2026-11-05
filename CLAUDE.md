@@ -69,6 +69,9 @@ Usuarios de prueba del seed: `ana@studyverse.test` y `juan@studyverse.test` (con
 - `storage_used` se ajusta con triggers a nivel sentencia en los borrados, para no restar dos veces en cascada.
 - Android: `127.0.0.1` se traduce a `10.0.2.2` en el emulador; `kotlin.incremental=false` porque el proyecto y el pub cache están en discos distintos. Compilar con el emulador apagado si hay poca RAM.
 - En la web, abrir archivos usa una ventana creada en el mismo clic (Safari bloquea pop-ups abiertos después de un `await`).
+- Documentos (`.svdoc`): el contenido es Delta de Quill (lista de ops). Para leerlo o convertirlo, usar `documentos/domain/delta.dart` (`lineasDe` / `opsDe`). El borrador en `documentos` solo vale mientras su autor tenga el bloqueo (`borradorVigente`); no mostrarlo como versión.
+- Visor: leer y convertir archivos en providers por versión (`visor_providers.dart`, con `compute`), nunca dentro de `build`. Todo zip (.docx/.xlsx/.pptx) se lee con `leerParte`, que pone tope a lo descomprimido.
+- En el editor, el `QuillController` se crea una vez y el documento se reemplaza solo desde `ref.listen` (en lectura); nunca reemplazarlo en cada build.
 - Textos: cortos y naturales, como en Drive ("Algo salió mal. Probá de nuevo", no "No se pudo completar la operación"). Los errores de un campo van en el campo (`errorText`); los avisos sueltos, con `mostrarMensaje`, que nunca usa rojo.
 - Auth manda como mucho un correo cada 30 s por email (`max_frequency`): pedir un código de entrada y enseguida uno de recuperación hace que el segundo no salga.
 - Los errores de Auth llegan como `AuthFailure` con `codigo` (`invalid_credentials`, `otp_expired`…): decidir dónde mostrarlos por el código, no por el texto.

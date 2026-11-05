@@ -7,6 +7,8 @@ App para que estudiantes universitarios trabajen en grupo en sus TPs, tan simple
 - **Grupos.** Cada grupo es una carpeta. Se entra con un código o un link de invitación, sin email. Roles: admin (quien lo crea) y miembro.
 - **Archivos con versiones.** Subir un archivo con el mismo nombre crea la versión siguiente, no un duplicado. Cada versión guarda quién la subió, cuándo, el tamaño y una nota opcional. Restaurar una versión vieja crea una nueva y no borra nada.
 - **Bloqueos sin esperas.** "Estoy editando este archivo" avisa en vivo ("🔒 Ana está editando") y protege el original. Los demás pueden subir sus cambios como copia o pedirle que lo libere. El bloqueo vence solo y el admin puede forzar el desbloqueo.
+- **Documentos de StudyVerse.** *Nuevo › Documento* crea un documento que se escribe en la app, como en Word: títulos, negrita, cursiva, subrayado, colores, listas (con viñetas, numeradas y de tareas), alineación, citas y links. Se edita de a uno (con el bloqueo de siempre): mientras escribís se guarda solo cada pocos segundos y tus compañeros lo ven en vivo; al tocar *Listo* (o salir) queda como versión. Se descarga como Word (.docx) o PDF, y un .docx se abre como documento editable con *Editar en StudyVerse*.
+- **Visor de archivos.** *Abrir* muestra el archivo dentro de la app: PDF, imágenes (con zoom), Word, Excel y CSV (en solapas, como planilla), PowerPoint (el texto de cada diapositiva), video, audio, texto y código. Los archivos de texto y código se pueden editar ahí mismo; cada cambio guardado es una versión nueva.
 - **Tareas por TP.** Cada tarea tiene responsable, fecha límite y estado. La vista **Aportes** muestra cuántas tareas completó y cuántas versiones subió cada integrante.
 - **Actividad.** Un feed por grupo: "Juan subió la v3 de Informe.docx", "Ana completó la tarea…".
 - **Bot de Telegram.** Avisa las versiones nuevas, los bloqueos y las tareas completadas, y recuerda las fechas límite el día anterior.
@@ -114,7 +116,7 @@ Nunca se suben claves al repo: los `.env` están en `.gitignore` y solo se versi
 
 - **Row Level Security en todas las tablas:** cada usuario solo ve y modifica los datos de sus grupos.
 - **Operaciones sensibles en funciones de la base:** crear o unirse a un grupo, subir versiones, bloquear, eliminar. Esas funciones validan permisos; el cliente no puede escribir directo en esas tablas.
-- **Storage:** bucket privado y políticas por grupo según la ruta `groups/{group_id}/…`. Solo se sube a rutas reservadas con `begin_upload`, y solo se leen los objetos de versiones que el plan deja ver. Las descargas usan URLs firmadas de 60 segundos.
+- **Storage:** bucket privado y políticas por grupo según la ruta `groups/{group_id}/…`. Solo se sube a rutas reservadas con `begin_upload`, y solo se leen los objetos de versiones que el plan deja ver. Las descargas usan URLs firmadas de 60 segundos (15 minutos para reproducir video y audio en el visor).
 - **Funciones auxiliares** (`nombre_de`, `is_member_of`, etc.) no se pueden llamar desde la API.
 - **Fotos de perfil:** bucket `avatares` público (como las de Google), una carpeta por usuario; cada uno solo sube y borra en la suya, máximo 1 MB y solo JPG, PNG o WebP. La foto se fija con `set_avatar`, que verifica que sea de tu carpeta.
 - **Dispositivos:** `mis_sesiones` y `cerrar_sesion` solo ven y cierran sesiones propias; la tabla `auth.sessions` no es accesible desde la app.
@@ -148,6 +150,14 @@ El mismo nombre (sin importar mayúsculas) en la misma carpeta crea una versión
 - **Qué pueden hacer los demás:** subir sus cambios como copia (`Informe (copia de Juan).docx`) o pedirle que lo libere (`request_unlock`). A quien lo tiene le llega el aviso en cualquier pantalla, con un botón "Liberar".
 - **Desbloquear:** subir una versión nueva lo desbloquea solo. `unlock_file` lo libera a mano, o lo fuerza si sos admin del grupo.
 - **Vencimiento:** al vencer (`lock_until`) el bloqueo se ignora al instante, y un job de `pg_cron` (cada 15 min) lo limpia para que todos vean el cambio en vivo.
+
+### Documentos
+
+- Un documento es un archivo `.svdoc` (la extensión no se muestra) cuyas versiones son JSON en formato Delta (el de [Quill](https://pub.dev/packages/flutter_quill)), en Storage como cualquier archivo.
+- **Editar** toma el bloqueo (2 h, se renueva solo mientras escribís). El autoguardado va a la tabla `documentos` con `guardar_documento`, que exige tener el archivo bloqueado; cada guardado avisa por el canal privado `grupo:{id}:documentos`.
+- **Listo** sube el contenido como versión nueva (eso libera el bloqueo) y un trigger descarta el borrador.
+- El borrador solo vale como "lo último" mientras su autor tenga el archivo bloqueado. Máximo 1 MB por borrador y 10 por persona.
+- Word y PDF se arman en la app (`documentos/domain/docx.dart` y `pdf_export.dart`), sin servidores extra.
 
 ### Tareas, actividad y aportes
 
@@ -209,7 +219,9 @@ La estructura está lista, pero esto no está implementado:
 
 ## Limitaciones conocidas
 
-- **Tamaño de archivo:** máximo 50 MB, y el archivo se lee entero en memoria antes de subirlo.
+- **Tamaño de archivo:** máximo 50 MB, y el archivo se lee entero en memoria antes de subirlo. La vista previa es para archivos de hasta 25 MB (los más grandes se descargan); las planillas muestran hasta 500 filas y 40 columnas, y los textos hasta 200.000 caracteres.
+- **Documentos:** se editan de a una persona por vez (no hay edición simultánea con cursores, como en Google Docs). Al importar un .docx las tablas pasan como texto y las imágenes se omiten; las presentaciones se ven solo como texto.
+- **Borradores sin terminar:** si alguien cierra la app sin tocar *Listo*, el bloqueo vence a las 2 h; mientras tanto los demás ven la última versión y esa persona recupera lo que escribió al volver a editar.
 - **Arrastrar y soltar en la web:** se sueltan archivos, no carpetas.
 - **Android:** compila y arranca, pero no está probado de punta a punta en un dispositivo.
 - **Login con Google:** necesita credenciales propias de Google Cloud.
