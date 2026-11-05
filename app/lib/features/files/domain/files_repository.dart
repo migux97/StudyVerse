@@ -55,7 +55,22 @@ abstract interface class FilesRepository {
 
   Future<FileVersion> restore(String versionId);
   Future<void> rename(String fileId, String nombre);
+  /// Lo manda a la papelera (se puede restaurar durante [diasPapelera] días).
   Future<void> delete(String fileId);
+
+  /// Lo que está en la papelera del grupo, lo último primero.
+  Future<List<FileItem>> papelera(String groupId);
+  Future<void> restaurar(String fileId);
+  Future<void> eliminarDefinitivo(String fileId);
+
+  /// Destacados y recientes de todos mis grupos.
+  Future<List<FileItem>> destacados();
+  Future<List<FileItem>> recientes();
+  Future<void> destacar(String fileId, {required bool destacado});
+  Future<void> marcarVisto(String fileId);
+
+  /// Busca por nombre en todos mis grupos (sin importar tildes).
+  Future<List<ResultadoBusqueda>> buscar(String texto);
 
   /// Emite cada vez que cambian carpetas, archivos o versiones del grupo.
   Stream<void> changes(String groupId);

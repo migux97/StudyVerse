@@ -17,6 +17,10 @@ const _selectArchivo = '*, '
     'pedidos:lock_requests(requested_by, created_at, '
     'requester:profiles!lock_requests_requested_by_fkey(nombre))';
 
+/// Igual que [_selectArchivo], con quién lo mandó a la papelera y el grupo.
+const _selectArchivoCompleto = '$_selectArchivo, '
+    'eliminador:profiles!files_deleted_by_fkey(nombre), grupo:groups(nombre)';
+
 class SupabaseFilesRepository implements FilesRepository {
   SupabaseFilesRepository(this._client);
   final SupabaseClient _client;
@@ -31,7 +35,7 @@ class SupabaseFilesRepository implements FilesRepository {
 
   @override
   Future<List<FileItem>> files(String groupId, String? folderId) => _guard(() async {
-        var query = _client.from('files').select(_selectArchivo).eq('group_id', groupId);
+        var query = _client.from('files').select(_selectArchivo).eq('group_id', groupId).isFilter('deleted_at', null);
         query = folderId == null ? query.isFilter('folder_id', null) : query.eq('folder_id', folderId);
         final rows = await query;
         return rows.map(FileItem.fromMap).where((f) => f.current != null).toList()
@@ -50,7 +54,7 @@ class SupabaseFilesRepository implements FilesRepository {
 
   @override
   Future<FileItem> file(String fileId) => _guard(() async {
-        final row = await _client.from('files').select(_selectArchivo).eq('id', fileId).maybeSingle();
+        final row = await _client.from('files').select(_selectArchivoCompleto).eq('id', fileId).maybeSingle();
         if (row == null) throw const FilesFailure('Ese archivo ya no existe o no tenés acceso');
         return FileItem.fromMap(row);
       });
@@ -182,17 +186,74 @@ class SupabaseFilesRepository implements FilesRepository {
       () => _client.rpc('rename_file', params: {'p_file_id': fileId, 'p_nombre': nombre}));
 
   @override
-  Future<void> delete(String fileId) => _guard(() async {
-        final rutas = await _client.rpc('delete_file', params: {'p_file_id': fileId}) as List;
-        // La base ya no lo tiene; si falla el borrado en Storage quedan objetos
-        // huérfanos, pero el archivo desaparece igual para el grupo.
-        if (rutas.isNotEmpty) {
-          try {
-            await _storage.remove(rutas.cast<String>());
-          } on StorageException {
-            // Se ignora a propósito (ver arriba).
-          }
+  Future<void> delete(String fileId) => _guard(() => _client.rpc('delete_file', params: {'p_file_id': fileId}));
+
+  @override
+  Future<List<FileItem>> papelera(String groupId) => _guard(() async {
+        final rows = await _client
+            .from('files')
+            .select(_selectArchivoCompleto)
+            .eq('group_id', groupId)
+            .not('deleted_at', 'is', null)
+            .order('deleted_at', ascending: false);
+        return rows.map(FileItem.fromMap).toList();
+      });
+
+  @override
+  Future<void> restaurar(String fileId) =>
+      _guard(() => _client.rpc('restaurar_archivo', params: {'p_file_id': fileId}));
+
+  @override
+  Future<void> eliminarDefinitivo(String fileId) =>
+      _guard(() => _client.rpc('eliminar_definitivo', params: {'p_file_id': fileId}));
+
+  @override
+  Future<List<FileItem>> destacados() => _guard(() async {
+        final rows = await _client
+            .from('destacados')
+            .select('created_at, file:files($_selectArchivoCompleto)')
+            .order('created_at', ascending: false);
+        return _deFilas(rows);
+      });
+
+  @override
+  Future<List<FileItem>> recientes() => _guard(() async {
+        final rows = await _client
+            .from('vistos')
+            .select('visto_at, file:files($_selectArchivoCompleto)')
+            .order('visto_at', ascending: false)
+            .limit(12);
+        return _deFilas(rows);
+      });
+
+  /// Filas con un archivo embebido: se descartan los de la papelera y los que
+  /// ya no se ven (por ejemplo, de un grupo del que salí).
+  List<FileItem> _deFilas(List<Map<String, dynamic>> rows) => [
+        for (final r in rows)
+          if (r['file'] case final Map<String, dynamic> f)
+            if (FileItem.fromMap(f) case final a when !a.enPapelera && a.current != null) a,
+      ];
+
+  @override
+  Future<void> destacar(String fileId, {required bool destacado}) => _guard(() async {
+        if (destacado) {
+          await _client.from('destacados').upsert(
+            {'user_id': _client.auth.currentUser!.id, 'file_id': fileId},
+            ignoreDuplicates: true,
+          );
+        } else {
+          await _client.from('destacados').delete().eq('file_id', fileId);
         }
+      });
+
+  @override
+  Future<void> marcarVisto(String fileId) =>
+      _guard(() => _client.rpc('marcar_visto', params: {'p_file_id': fileId}));
+
+  @override
+  Future<List<ResultadoBusqueda>> buscar(String texto) => _guard(() async {
+        final rows = await _client.rpc('buscar_archivos', params: {'p_texto': texto}) as List;
+        return rows.map((r) => ResultadoBusqueda.fromMap(r as Map<String, dynamic>)).toList();
       });
 
   @override

@@ -53,3 +53,29 @@ final versionsProvider =
   ref.watch(filesChangesProvider(key.groupId));
   return ref.watch(filesRepositoryProvider).versions(key.fileId);
 });
+
+/// Papelera del grupo, en vivo.
+final papeleraProvider = FutureProvider.autoDispose.family<List<FileItem>, String>((ref, groupId) {
+  ref.watch(filesChangesProvider(groupId));
+  return ref.watch(filesRepositoryProvider).papelera(groupId);
+});
+
+/// Destacados y recientes de todos mis grupos (se refrescan al volver a "Mis grupos").
+final destacadosProvider = FutureProvider.autoDispose<List<FileItem>>(
+  (ref) => ref.watch(filesRepositoryProvider).destacados(),
+);
+
+final recientesProvider = FutureProvider.autoDispose<List<FileItem>>(
+  (ref) => ref.watch(filesRepositoryProvider).recientes(),
+);
+
+/// Ids de mis destacados, para mostrar la estrella en cualquier lista.
+final idsDestacadosProvider = Provider.autoDispose<Set<String>>(
+  (ref) => {for (final f in ref.watch(destacadosProvider).value ?? const <FileItem>[]) f.id},
+);
+
+final busquedaProvider = FutureProvider.autoDispose.family<List<ResultadoBusqueda>, String>(
+  (ref, texto) => texto.trim().length < 2
+      ? Future.value(const [])
+      : ref.watch(filesRepositoryProvider).buscar(texto.trim()),
+);

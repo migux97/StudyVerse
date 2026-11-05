@@ -5,6 +5,7 @@ import '../domain/file_item.dart';
 import '../../visor/presentation/visor_screen.dart';
 import 'file_actions.dart';
 import 'file_icon.dart';
+import 'files_providers.dart';
 
 /// Lista de carpetas y archivos. En pantallas anchas muestra columnas
 /// (autor, fecha, tamaño); en el celular, todo en el subtítulo.
@@ -119,6 +120,7 @@ class _CarpetaTile extends ConsumerWidget {
 enum _AccionArchivo {
   abrir,
   descargar,
+  destacar,
   bloquear,
   renovar,
   desbloquear,
@@ -165,6 +167,8 @@ class _ArchivoTile extends ConsumerWidget {
         abrirArchivo(context, archivo);
       case _AccionArchivo.descargar:
         abrirVersion(context, ref, v, archivo.nombre, descargar: true);
+      case _AccionArchivo.destacar:
+        alternarDestacado(context, ref, archivo);
       case _AccionArchivo.bloquear:
         bloquearArchivo(context, ref, archivo);
       case _AccionArchivo.renovar:
@@ -224,6 +228,10 @@ class _ArchivoTile extends ConsumerWidget {
       itemBuilder: (_) => [
         item(_AccionArchivo.abrir, Icons.visibility_outlined, 'Abrir'),
         item(_AccionArchivo.descargar, Icons.download_rounded, 'Descargar'),
+        if (ref.read(idsDestacadosProvider).contains(archivo.id))
+          item(_AccionArchivo.destacar, Icons.star_rounded, 'Quitar de destacados')
+        else
+          item(_AccionArchivo.destacar, Icons.star_outline_rounded, 'Agregar a destacados'),
         const PopupMenuDivider(),
         ...switch (bloqueo) {
           EstadoBloqueo.libre => [
@@ -258,12 +266,17 @@ class _ArchivoTile extends ConsumerWidget {
         item(_AccionArchivo.historial, Icons.history_rounded, 'Historial (v${v.versionNumber})'),
         item(_AccionArchivo.renombrar, Icons.edit_outlined, 'Cambiar nombre', habilitado: libreParaMi),
         if (puedeEliminar)
-          item(_AccionArchivo.eliminar, Icons.delete_outline, 'Eliminar', habilitado: libreParaMi),
+          item(_AccionArchivo.eliminar, Icons.delete_outline, 'Mover a la papelera', habilitado: libreParaMi),
       ],
     );
 
     final nombre = Row(children: [
       Flexible(child: Text(archivo.visible, maxLines: 1, overflow: TextOverflow.ellipsis)),
+      if (ref.watch(idsDestacadosProvider).contains(archivo.id))
+        Padding(
+          padding: const EdgeInsets.only(left: 6),
+          child: Icon(Icons.star_rounded, size: 16, color: theme.colorScheme.onSurfaceVariant),
+        ),
       const SizedBox(width: 8),
       _VersionChip(numero: v.versionNumber),
       if (bloqueo != EstadoBloqueo.libre) ...[

@@ -383,17 +383,62 @@ Future<void> renombrarArchivo(BuildContext context, WidgetRef ref, FileItem arch
   });
 }
 
+/// Lo manda a la papelera, sin preguntar (se puede deshacer, como en Drive).
 Future<void> eliminarArchivo(BuildContext context, WidgetRef ref, FileItem archivo) async {
+  final repo = ref.read(filesRepositoryProvider);
+  final ok = await _intentar(context, () async {
+    await repo.delete(archivo.id);
+    ref.invalidate(filesProvider((groupId: archivo.groupId, folderId: archivo.folderId)));
+    ref.invalidate(destacadosProvider);
+    ref.invalidate(recientesProvider);
+  });
+  if (!ok || !context.mounted) return;
+  mostrarMensaje(
+    context,
+    'Se movió «${archivo.visible}» a la papelera',
+    accion: 'Deshacer',
+    alTocar: () async {
+      try {
+        await repo.restaurar(archivo.id);
+        ref.invalidate(filesProvider((groupId: archivo.groupId, folderId: archivo.folderId)));
+      } on FilesFailure catch (e) {
+        avisarEnLaApp(e.mensaje);
+      }
+    },
+  );
+}
+
+Future<void> restaurarArchivo(BuildContext context, WidgetRef ref, FileItem archivo) async {
+  final ok = await _intentar(context, () => ref.read(filesRepositoryProvider).restaurar(archivo.id));
+  if (!ok || !context.mounted) return;
+  ref.invalidate(papeleraProvider(archivo.groupId));
+  ref.invalidate(destacadosProvider);
+  ref.invalidate(recientesProvider);
+  mostrarMensaje(context, 'Restauramos «${archivo.visible}»');
+}
+
+Future<void> eliminarParaSiempre(BuildContext context, WidgetRef ref, FileItem archivo) async {
   final ok = await confirmar(
     context,
-    titulo: '¿Eliminar "${archivo.nombre}"?',
-    mensaje: 'Se elimina con todas sus versiones, para todo el grupo. No se puede deshacer.',
-    accion: 'Eliminar',
+    titulo: '¿Eliminar «${archivo.visible}» para siempre?',
+    mensaje: 'Se borra con todas sus versiones, para todo el grupo. No se puede deshacer.',
+    accion: 'Eliminar para siempre',
     peligroso: true,
   );
   if (!ok || !context.mounted) return;
-  await _intentar(context, () async {
-    await ref.read(filesRepositoryProvider).delete(archivo.id);
-    ref.invalidate(filesProvider((groupId: archivo.groupId, folderId: archivo.folderId)));
-  });
+  final listo = await _intentar(context, () => ref.read(filesRepositoryProvider).eliminarDefinitivo(archivo.id));
+  if (!listo || !context.mounted) return;
+  ref.invalidate(papeleraProvider(archivo.groupId));
+  mostrarMensaje(context, 'Se eliminó para siempre');
+}
+
+Future<void> alternarDestacado(BuildContext context, WidgetRef ref, FileItem archivo) async {
+  final destacado = ref.read(idsDestacadosProvider).contains(archivo.id);
+  final ok = await _intentar(
+    context,
+    () => ref.read(filesRepositoryProvider).destacar(archivo.id, destacado: !destacado),
+  );
+  if (!ok || !context.mounted) return;
+  ref.invalidate(destacadosProvider);
+  mostrarMensaje(context, destacado ? 'Lo sacamos de destacados' : 'Lo agregamos a destacados');
 }

@@ -83,6 +83,10 @@ class FileItem {
     this.pedidos = const [],
     this.createdBy,
     required this.createdAt,
+    this.deletedAt,
+    this.deletedBy,
+    this.deletedByNombre,
+    this.grupo,
   });
 
   final String id;
@@ -101,6 +105,20 @@ class FileItem {
   final List<PedidoLiberacion> pedidos;
   final String? createdBy;
   final DateTime createdAt;
+
+  /// Cuándo se mandó a la papelera (null si no está).
+  final DateTime? deletedAt;
+  final String? deletedBy;
+  final String? deletedByNombre;
+
+  /// Nombre del grupo (solo en búsquedas, destacados y recientes).
+  final String? grupo;
+
+  bool get enPapelera => deletedAt != null;
+
+  /// Días que le quedan en la papelera antes de borrarse solo.
+  int diasEnPapelera(DateTime ahora) =>
+      deletedAt == null ? 0 : (diasPapelera - ahora.difference(deletedAt!).inDays).clamp(0, diasPapelera);
 
   FileKind get kind => fileKindFor(nombre);
 
@@ -145,8 +163,52 @@ class FileItem {
       ],
       createdBy: map['created_by'] as String?,
       createdAt: DateTime.parse(map['created_at'] as String),
+      deletedAt: fecha('deleted_at'),
+      deletedBy: map['deleted_by'] as String?,
+      deletedByNombre: (map['eliminador'] as Map<String, dynamic>?)?['nombre'] as String?,
+      grupo: (map['grupo'] as Map<String, dynamic>?)?['nombre'] as String?,
     );
   }
+}
+
+/// Lo que está en la papelera se borra solo a los 30 días (como en Drive).
+const diasPapelera = 30;
+
+/// Un resultado de "Buscar en StudyVerse".
+class ResultadoBusqueda {
+  const ResultadoBusqueda({
+    required this.fileId,
+    required this.groupId,
+    required this.grupo,
+    this.folderId,
+    this.carpeta,
+    required this.nombre,
+    required this.actualizado,
+  });
+
+  final String fileId;
+  final String groupId;
+  final String grupo;
+  final String? folderId;
+  final String? carpeta;
+  final String nombre;
+  final DateTime actualizado;
+
+  FileKind get kind => fileKindFor(nombre);
+  String get visible => nombreVisible(nombre);
+
+  /// "Física II › Parciales".
+  String get ubicacion => carpeta == null ? grupo : '$grupo › $carpeta';
+
+  factory ResultadoBusqueda.fromMap(Map<String, dynamic> m) => ResultadoBusqueda(
+        fileId: m['file_id'] as String,
+        groupId: m['group_id'] as String,
+        grupo: m['grupo'] as String,
+        folderId: m['folder_id'] as String?,
+        carpeta: m['carpeta'] as String?,
+        nombre: m['nombre'] as String,
+        actualizado: DateTime.parse(m['actualizado'] as String),
+      );
 }
 
 /// "Ana necesita editar este archivo": pedido a quien lo tiene bloqueado.

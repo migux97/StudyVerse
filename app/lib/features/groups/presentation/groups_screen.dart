@@ -8,6 +8,7 @@ import '../../auth/presentation/user_avatar.dart';
 import '../domain/group.dart';
 import 'group_dialogs.dart';
 import 'groups_providers.dart';
+import '../../inicio/presentation/inicio_secciones.dart';
 
 /// Pantalla principal: los grupos del usuario, como carpetas.
 class GroupsScreen extends ConsumerWidget {
@@ -22,6 +23,11 @@ class GroupsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Mis grupos'),
         actions: [
+          IconButton(
+            tooltip: 'Calendario',
+            icon: const Icon(Icons.calendar_month_outlined),
+            onPressed: () => context.push(Routes.calendario),
+          ),
           IconButton(
             tooltip: 'Unirme con un código',
             icon: const Icon(Icons.group_add_outlined),
@@ -70,26 +76,42 @@ class _ListaGrupos extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
-      // Celular: lista. PC / tablet: grilla de carpetas.
-      if (constraints.maxWidth < 600) {
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-          itemCount: grupos.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 8),
-          itemBuilder: (_, i) => _GrupoTile(grupo: grupos[i]),
-        );
-      }
-      return GridView.builder(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 96),
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 280,
-          mainAxisExtent: 132,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
+      // Celular: lista. PC / tablet: grilla de carpetas. Arriba, como en Drive:
+      // buscar, lo que se viene, destacados y recientes.
+      final celular = constraints.maxWidth < 600;
+      final lado = celular ? 16.0 : 24.0;
+      return CustomScrollView(slivers: [
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(lado, 8, lado, 0),
+          sliver: SliverToBoxAdapter(
+            child: Center(
+                child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 1200), child: const InicioSecciones())),
+          ),
         ),
-        itemCount: grupos.length,
-        itemBuilder: (_, i) => _GrupoCard(grupo: grupos[i]),
-      );
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(lado + 4, 20, lado, 8),
+          sliver: SliverToBoxAdapter(child: Text('Tus grupos', style: Theme.of(context).textTheme.titleSmall)),
+        ),
+        SliverPadding(
+          padding: EdgeInsets.fromLTRB(lado, 0, lado, 96),
+          sliver: celular
+              ? SliverList.separated(
+                  itemCount: grupos.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                  itemBuilder: (_, i) => _GrupoTile(grupo: grupos[i]),
+                )
+              : SliverGrid.builder(
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 280,
+                    mainAxisExtent: 132,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  itemCount: grupos.length,
+                  itemBuilder: (_, i) => _GrupoCard(grupo: grupos[i]),
+                ),
+        ),
+      ]);
     });
   }
 }

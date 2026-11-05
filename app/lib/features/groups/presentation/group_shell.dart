@@ -187,7 +187,7 @@ class Aviso extends StatelessWidget {
   }
 }
 
-enum _Accion { telegram, editar, salir, eliminar }
+enum _Accion { telegram, papelera, editar, salir, eliminar }
 
 class _MenuGrupo extends ConsumerWidget {
   const _MenuGrupo({required this.grupo});
@@ -199,6 +199,7 @@ class _MenuGrupo extends ConsumerWidget {
       tooltip: 'Más opciones',
       onSelected: (a) => switch (a) {
         _Accion.telegram => context.push(Routes.telegram(grupo.id)),
+        _Accion.papelera => context.push(Routes.papelera(grupo.id)),
         _Accion.editar => editarGrupo(context, ref, grupo),
         _Accion.salir => salirDelGrupo(context, ref, grupo),
         _Accion.eliminar => eliminarGrupo(context, ref, grupo),
@@ -207,6 +208,10 @@ class _MenuGrupo extends ConsumerWidget {
         const PopupMenuItem(
           value: _Accion.telegram,
           child: ListTile(leading: Icon(Icons.send_outlined), title: Text('Avisos por Telegram')),
+        ),
+        const PopupMenuItem(
+          value: _Accion.papelera,
+          child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Papelera')),
         ),
         if (grupo.soyAdmin)
           const PopupMenuItem(
