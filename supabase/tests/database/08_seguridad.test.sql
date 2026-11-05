@@ -147,10 +147,10 @@ select is((select count(*)::int from storage.objects where name = (select storag
   'el objeto de una versión oculta por el plan no se puede leer');
 select is((select count(*)::int from storage.objects where name = (select storage_path from v2)), 1,
   'el de una versión visible sí');
--- Ana no tiene la reserva de ese objeto: lo ve por huérfano, no por suyo.
+-- Ana no tiene la reserva de ese objeto, y ninguna versión lo usa.
 select pg_temp.como('00000000-0000-0000-0000-0000000000a1');
-select is((select count(*)::int from storage.objects where name = (select storage_path from rb)), 1,
-  'un objeto huérfano se puede leer (para poder borrarlo)');
+select is((select count(*)::int from storage.objects where name = (select storage_path from rb)), 0,
+  'un objeto huérfano no se puede leer (lo borra la limpieza diaria)');
 
 set local role postgres;
 update public.groups set plan = 'premium' where id = (select id from g);

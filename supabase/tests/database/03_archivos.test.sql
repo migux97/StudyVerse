@@ -163,10 +163,11 @@ select throws_ok(format($$ select public.delete_folder(%L) $$, (select id from c
   'P0001', 'La carpeta no está vacía', 'no se elimina una carpeta con contenido');
 
 select pg_temp.como('00000000-0000-0000-0000-00000000000a');
-select is((select count(*)::int from public.delete_file((select file_id from v1))), 4,
-  'eliminar devuelve los 4 objetos distintos para borrar de Storage');
+select is((select count(*)::int from public.delete_file((select file_id from v1))), 0,
+  'eliminar lo manda a la papelera (no borra nada de Storage)');
+select public.eliminar_definitivo((select file_id from v1));
 select is((select storage_used from public.groups where id = (select id from g)), 0::bigint,
-  'storage_used vuelve a 0 (cada objeto se descuenta una vez)');
+  'al eliminarlo para siempre storage_used vuelve a 0 (cada objeto se descuenta una vez)');
 
 select * from finish();
 rollback;
