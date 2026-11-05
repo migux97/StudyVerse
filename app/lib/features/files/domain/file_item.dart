@@ -34,6 +34,10 @@ class FileVersion {
     this.uploadedBy,
     this.uploaderNombre,
     required this.createdAt,
+    this.guardadaNombre,
+    this.guardadaPor,
+    this.guardadaPorNombre,
+    this.guardadaAt,
   });
 
   final String id;
@@ -46,6 +50,15 @@ class FileVersion {
   final String? uploadedBy;
   final String? uploaderNombre;
   final DateTime createdAt;
+
+  /// Nombre con el que se guardó ("Entrega 1"), si se guardó. Las guardadas
+  /// se ven siempre, aunque el plan gratis muestre solo las últimas.
+  final String? guardadaNombre;
+  final String? guardadaPor;
+  final String? guardadaPorNombre;
+  final DateTime? guardadaAt;
+
+  bool get guardada => guardadaNombre != null;
 
   /// Una versión no cambia: alcanza con el id (sirve de clave en providers).
   @override
@@ -66,6 +79,10 @@ class FileVersion {
         uploadedBy: map['uploaded_by'] as String?,
         uploaderNombre: (map['uploader'] as Map<String, dynamic>?)?['nombre'] as String?,
         createdAt: DateTime.parse(map['created_at'] as String),
+        guardadaNombre: map['guardada_nombre'] as String?,
+        guardadaPor: map['guardada_por'] as String?,
+        guardadaPorNombre: (map['guardador'] as Map<String, dynamic>?)?['nombre'] as String?,
+        guardadaAt: map['guardada_at'] == null ? null : DateTime.parse(map['guardada_at'] as String),
       );
 }
 

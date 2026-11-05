@@ -23,6 +23,8 @@ import '../../features/groups/presentation/members_screen.dart';
 import '../../features/groups/presentation/telegram_screen.dart';
 import '../../features/tasks/presentation/contributions_screen.dart';
 import '../../features/tasks/presentation/tasks_screen.dart';
+import '../../features/versiones/presentation/comparar_screen.dart';
+import '../../features/versiones/presentation/historial_screen.dart';
 import '../../features/visor/presentation/visor_screen.dart';
 
 class Routes {
@@ -47,6 +49,11 @@ class Routes {
   static String papelera(String id) => '/grupos/$id/papelera';
   static String archivo(String grupoId, String fileId) => '/grupos/$grupoId/archivos/$fileId';
   static String documento(String grupoId, String fileId) => '/grupos/$grupoId/documentos/$fileId';
+  static String historial(String grupoId, String fileId) => '/grupos/$grupoId/versiones/$fileId';
+  static String comparar(String grupoId, String fileId, {String? antes, String? despues}) => Uri(
+        path: '/grupos/$grupoId/comparar/$fileId',
+        queryParameters: {'antes': ?antes, 'despues': ?despues},
+      ).toString();
   static String unirse(String codigo) => '/unirse/$codigo';
 
   static const publicas = {login, registro};
@@ -115,6 +122,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'archivos/:fileId',
             builder: (_, s) => VisorScreen(groupId: s.pathParameters['id']!, fileId: s.pathParameters['fileId']!),
+          ),
+          GoRoute(
+            path: 'versiones/:fileId',
+            builder: (_, s) => HistorialScreen(groupId: s.pathParameters['id']!, fileId: s.pathParameters['fileId']!),
+          ),
+          GoRoute(
+            path: 'comparar/:fileId',
+            builder: (_, s) => CompararScreen(
+              groupId: s.pathParameters['id']!,
+              fileId: s.pathParameters['fileId']!,
+              antesId: s.uri.queryParameters['antes'],
+              despuesId: s.uri.queryParameters['despues'],
+            ),
           ),
           GoRoute(
             path: 'documentos/:fileId',

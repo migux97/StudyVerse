@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../versiones/presentation/historial_screen.dart';
 import '../domain/file_item.dart';
 import '../../visor/presentation/visor_screen.dart';
 import 'file_actions.dart';
 import 'file_icon.dart';
-import 'version_history_sheet.dart';
 
 /// Panel lateral del explorador en PC: detalles del archivo elegido, acciones
 /// principales y su historial de versiones.
@@ -97,10 +97,13 @@ class FileDetailsPanel extends ConsumerWidget {
       ),
       const Divider(height: 24),
       Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-        child: Text('Versiones', style: theme.textTheme.titleSmall),
+        padding: const EdgeInsets.fromLTRB(16, 0, 8, 0),
+        child: Row(children: [
+          Expanded(child: Text('Versiones', style: theme.textTheme.titleSmall)),
+          TextButton(onPressed: () => verHistorial(context, a), child: const Text('Ver todo')),
+        ]),
       ),
-      Expanded(child: VersionList(archivo: a, compacta: true)),
+      Expanded(child: ListaVersiones(archivo: a, compacta: true)),
     ]);
   }
 }

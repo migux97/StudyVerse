@@ -54,6 +54,10 @@ abstract interface class FilesRepository {
   Future<void> unlock(String fileId);
 
   Future<FileVersion> restore(String versionId);
+
+  /// Guarda la versión con [nombre] (o le cambia el nombre). Con `null` la
+  /// quita de las guardadas (con el plan gratis puede dejar de verse).
+  Future<void> guardarVersion(String versionId, String? nombre);
   Future<void> rename(String fileId, String nombre);
   /// Lo manda a la papelera (se puede restaurar durante [diasPapelera] días).
   Future<void> delete(String fileId);

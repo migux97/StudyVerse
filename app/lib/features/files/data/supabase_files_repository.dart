@@ -10,9 +10,13 @@ import '../../../core/realtime/canales.dart';
 
 const _bucket = 'archivos';
 
+/// Versión con quién la subió y quién la guardó (hay dos referencias a profiles).
+const _selectVersion = '*, uploader:profiles!file_versions_uploaded_by_fkey(nombre), '
+    'guardador:profiles!file_versions_guardada_por_fkey(nombre)';
+
 /// Archivo con su versión actual (y su autor) y quién lo tiene bloqueado.
 const _selectArchivo = '*, '
-    'current:file_versions!files_current_version_id_fkey(*, uploader:profiles(nombre)), '
+    'current:file_versions!files_current_version_id_fkey($_selectVersion), '
     'locker:profiles!files_locked_by_fkey(nombre), '
     'pedidos:lock_requests(requested_by, created_at, '
     'requester:profiles!lock_requests_requested_by_fkey(nombre))';
@@ -46,7 +50,7 @@ class SupabaseFilesRepository implements FilesRepository {
   Future<List<FileVersion>> versions(String fileId) => _guard(() async {
         final rows = await _client
             .from('file_versions')
-            .select('*, uploader:profiles(nombre)')
+            .select(_selectVersion)
             .eq('file_id', fileId)
             .order('version_number', ascending: false);
         return rows.map(FileVersion.fromMap).toList();
@@ -180,6 +184,10 @@ class SupabaseFilesRepository implements FilesRepository {
             await _client.rpc('restore_version', params: {'p_version_id': versionId}).single();
         return FileVersion.fromMap(row);
       });
+
+  @override
+  Future<void> guardarVersion(String versionId, String? nombre) => _guard(
+      () => _client.rpc('guardar_version', params: {'p_version_id': versionId, 'p_nombre': nombre}));
 
   @override
   Future<void> rename(String fileId, String nombre) => _guard(

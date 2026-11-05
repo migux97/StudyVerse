@@ -3,9 +3,11 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/forms/validar.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/web/ventana.dart';
 import '../../../core/widgets/auth_layout.dart';
 import '../../../core/widgets/confirm_dialog.dart';
@@ -17,7 +19,6 @@ import '../domain/folder_tree.dart';
 import 'files_providers.dart';
 import 'upload_dialog.dart';
 import 'uploads_controller.dart';
-import 'version_history_sheet.dart';
 
 /// Ejecuta una acción mostrando el error (si hay) en un SnackBar.
 Future<bool> _intentar(BuildContext context, Future<void> Function() accion) async {
@@ -351,13 +352,8 @@ Future<void> abrirVersion(
 
 // Historial / renombrar / eliminar ------------------------------------------------
 
-Future<void> verHistorial(BuildContext context, FileItem archivo) => showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      constraints: const BoxConstraints(maxWidth: 640),
-      builder: (_) => VersionHistorySheet(archivo: archivo),
-    );
+Future<void> verHistorial(BuildContext context, FileItem archivo) =>
+    context.push(Routes.historial(archivo.groupId, archivo.id));
 
 Future<void> renombrarArchivo(BuildContext context, WidgetRef ref, FileItem archivo) async {
   final nombre = await pedirTexto(
