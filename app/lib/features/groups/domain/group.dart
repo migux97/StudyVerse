@@ -16,6 +16,9 @@ class Group {
     this.cantidadMiembros,
     this.materias = const [],
     this.aprobarTareas = false,
+    this.cursoId,
+    this.cursoNombre,
+    this.cursoDocente,
   });
 
   final String id;
@@ -37,6 +40,14 @@ class Group {
   /// Las tareas las aprueba un admin (quien la hace la marca como entregada).
   final bool aprobarTareas;
 
+  /// Curso al que se sumó el grupo (lo ve su docente).
+  final String? cursoId;
+  final String? cursoNombre;
+  final String? cursoDocente;
+
+  /// Lo veo sin ser integrante: soy el docente del curso.
+  bool get soloLectura => miRol == null;
+
   /// Con aprobación, solo un admin deja una tarea como hecha.
   bool get puedoCerrarTareas => !aprobarTareas || soyAdmin;
 
@@ -47,7 +58,8 @@ class Group {
         id: map['id'] as String,
         nombre: map['nombre'] as String,
         materia: map['materia'] as String?,
-        inviteCode: map['invite_code'] as String,
+        // El docente no recibe el código de invitación.
+        inviteCode: map['invite_code'] as String? ?? '',
         plan: Plan.values.byName(map['plan'] as String? ?? 'free'),
         storageUsed: (map['storage_used'] as num?)?.toInt() ?? 0,
         createdBy: map['created_by'] as String?,
@@ -59,6 +71,9 @@ class Group {
             if (m is Map && (m['es_materia'] ?? true) == true) m['nombre'] as String,
         ]..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase())),
         aprobarTareas: map['aprobar_tareas'] as bool? ?? false,
+        cursoId: map['curso_id'] as String?,
+        cursoNombre: (map['curso'] as Map<String, dynamic>?)?['nombre'] as String?,
+        cursoDocente: ((map['curso'] as Map<String, dynamic>?)?['docente'] as Map<String, dynamic>?)?['nombre'] as String?,
       );
 }
 

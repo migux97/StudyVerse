@@ -26,6 +26,7 @@ import '../../features/tasks/presentation/tasks_screen.dart';
 import '../../features/versiones/presentation/comparar_screen.dart';
 import '../../features/versiones/presentation/historial_screen.dart';
 import '../../features/visor/presentation/visor_screen.dart';
+import '../../features/cursos/presentation/curso_screen.dart';
 
 class Routes {
   static const login = '/login';
@@ -55,6 +56,7 @@ class Routes {
         queryParameters: {'antes': ?antes, 'despues': ?despues},
       ).toString();
   static String unirse(String codigo) => '/unirse/$codigo';
+  static String curso(String id) => '/cursos/$id';
 
   static const publicas = {login, registro};
 
@@ -106,6 +108,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.grupos, builder: (_, _) => const GroupsScreen()),
       GoRoute(path: Routes.buscar, builder: (_, _) => const BuscarScreen()),
       GoRoute(path: Routes.calendario, builder: (_, _) => const CalendarioScreen()),
+      GoRoute(path: '/cursos/:id', builder: (_, s) => CursoScreen(cursoId: s.pathParameters['id']!)),
       GoRoute(
         path: Routes.perfil,
         builder: (_, _) => const ProfileScreen(),

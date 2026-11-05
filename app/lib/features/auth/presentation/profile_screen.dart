@@ -95,6 +95,12 @@ class ProfileScreen extends ConsumerWidget {
                               validator: Validators.opcional,
                               cambios: (v) => CambiosPerfil(universidad: v)),
                         ),
+                        _Dato(
+                          icono: p.esDocente ? Icons.school_outlined : Icons.backpack_outlined,
+                          titulo: 'Tipo de cuenta',
+                          valor: p.tipo.etiqueta,
+                          onTap: () => _cambiarTipo(context, ref, p),
+                        ),
                       ]),
                       const SizedBox(height: 16),
                       _Seccion(titulo: 'Seguridad', children: [
@@ -163,6 +169,30 @@ class ProfileScreen extends ConsumerWidget {
     if (nuevo == null || nuevo == (inicial ?? '') || !context.mounted) return;
     final error = await ref.read(currentProfileProvider.notifier).actualizar(cambios(nuevo));
     if (context.mounted) mostrarMensaje(context, error ?? 'Guardado', error: error != null);
+  }
+
+  Future<void> _cambiarTipo(BuildContext context, WidgetRef ref, Profile p) async {
+    final nuevo = await showDialog<TipoCuenta>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Tipo de cuenta'),
+        children: [
+          for (final t in TipoCuenta.values)
+            ListTile(
+              leading: Icon(t == TipoCuenta.docente ? Icons.school_outlined : Icons.backpack_outlined),
+              title: Text(t.etiqueta),
+              subtitle: Text(t == TipoCuenta.docente
+                  ? 'Creás cursos y ves los grupos de tu clase'
+                  : 'Armás grupos con tus compañeros'),
+              trailing: t == p.tipo ? const Icon(Icons.check) : null,
+              onTap: () => Navigator.pop(ctx, t),
+            ),
+        ],
+      ),
+    );
+    if (nuevo == null || nuevo == p.tipo || !context.mounted) return;
+    final error = await ref.read(currentProfileProvider.notifier).actualizar(CambiosPerfil(tipo: nuevo));
+    if (context.mounted) mostrarMensaje(context, error ?? 'Ahora tu cuenta es de ${nuevo.etiqueta.toLowerCase()}', error: error != null);
   }
 
   Future<void> _editarUsuario(BuildContext context, WidgetRef ref, Profile p) async {

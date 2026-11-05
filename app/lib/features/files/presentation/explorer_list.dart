@@ -20,7 +20,11 @@ class ExplorerList extends StatelessWidget {
     required this.onAbrirCarpeta,
     this.seleccionadoId,
     this.onSeleccionar,
+    this.soloLectura = false,
   });
+
+  /// El docente: abrir, descargar y ver el historial, nada más.
+  final bool soloLectura;
 
   final List<Folder> carpetas;
   final List<FileItem> archivos;
@@ -43,7 +47,7 @@ class ExplorerList extends StatelessWidget {
           if (ancho) const _Encabezado(),
           // Las materias primero, como carpetas destacadas.
           for (final c in [...carpetas.where((c) => c.esMateria), ...carpetas.where((c) => !c.esMateria)])
-            _CarpetaTile(carpeta: c, ancho: ancho, onTap: () => onAbrirCarpeta(c)),
+            _CarpetaTile(carpeta: c, ancho: ancho, soloLectura: soloLectura, onTap: () => onAbrirCarpeta(c)),
           for (final a in archivos)
             _ArchivoTile(
               archivo: a,
@@ -54,6 +58,7 @@ class ExplorerList extends StatelessWidget {
               yaLoPedi: a.pedidoPor(miId),
               soyAdmin: soyAdmin,
               puedeEliminar: soyAdmin || a.createdBy == miId,
+              soloLectura: soloLectura,
               seleccionado: a.id == seleccionadoId,
               onSeleccionar: onSeleccionar == null ? null : () => onSeleccionar!(a),
             ),
@@ -86,9 +91,10 @@ class _Encabezado extends StatelessWidget {
 enum _AccionCarpeta { renombrar, color, hacerMateria, quitarMateria, eliminar }
 
 class _CarpetaTile extends ConsumerWidget {
-  const _CarpetaTile({required this.carpeta, required this.ancho, required this.onTap});
+  const _CarpetaTile({required this.carpeta, required this.ancho, required this.onTap, this.soloLectura = false});
   final Folder carpeta;
   final bool ancho;
+  final bool soloLectura;
   final VoidCallback onTap;
 
   @override
@@ -105,7 +111,7 @@ class _CarpetaTile extends ConsumerWidget {
       title: Text(c.nombre, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: c.esMateria ? const Text('Materia') : null,
       onTap: onTap,
-      trailing: PopupMenuButton<_AccionCarpeta>(
+      trailing: soloLectura ? null : PopupMenuButton<_AccionCarpeta>(
         tooltip: 'Opciones',
         onSelected: (a) => switch (a) {
           _AccionCarpeta.renombrar => renombrarCarpeta(context, ref, c),
@@ -172,8 +178,10 @@ class _ArchivoTile extends ConsumerWidget {
     required this.puedeEliminar,
     required this.seleccionado,
     required this.onSeleccionar,
+    this.soloLectura = false,
   });
 
+  final bool soloLectura;
   final FileItem archivo;
   final bool seleccionado;
   final VoidCallback? onSeleccionar;
@@ -252,7 +260,13 @@ class _ArchivoTile extends ConsumerWidget {
     final menu = PopupMenuButton<_AccionArchivo>(
       tooltip: 'Opciones',
       onSelected: (a) => _accion(context, ref, a),
-      itemBuilder: (_) => [
+      itemBuilder: (_) => soloLectura
+          ? [
+              item(_AccionArchivo.abrir, Icons.visibility_outlined, 'Abrir'),
+              item(_AccionArchivo.descargar, Icons.download_rounded, 'Descargar'),
+              item(_AccionArchivo.historial, Icons.history_rounded, 'Historial (v${v.versionNumber})'),
+            ]
+          : [
         item(_AccionArchivo.abrir, Icons.visibility_outlined, 'Abrir'),
         item(_AccionArchivo.descargar, Icons.download_rounded, 'Descargar'),
         if (ref.read(idsDestacadosProvider).contains(archivo.id))

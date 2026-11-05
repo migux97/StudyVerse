@@ -19,6 +19,7 @@ import '../domain/documento.dart';
 import '../domain/pdf_export.dart';
 import '../../comentarios/presentation/comentarios_panel.dart';
 import 'documentos_providers.dart';
+import '../../groups/presentation/groups_providers.dart';
 
 enum _Guardado { alDia, guardando, sinConexion }
 
@@ -317,7 +318,7 @@ class _DocumentoScreenState extends ConsumerState<DocumentoScreen> {
                   onPressed: _terminando ? null : () => _terminar(a),
                 ),
               )
-            else if (a != null && estado != EstadoBloqueo.deOtro)
+            else if (a != null && estado != EstadoBloqueo.deOtro && !ref.watch(soloLecturaProvider(a.groupId)))
               Padding(
                 padding: const EdgeInsets.only(right: 4),
                 child: FilledButton.icon(

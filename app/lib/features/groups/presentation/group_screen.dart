@@ -93,7 +93,9 @@ class _ExploradorState extends ConsumerState<_Explorador> {
           (AsyncValue(:final error?), _) || (_, AsyncValue(:final error?)) =>
             Aviso(icono: Icons.error_outline, texto: error.toString()),
           (AsyncValue(hasValue: true), AsyncValue(hasValue: true)) =>
-            hijasDe(folderId, todas).isEmpty && lista.isEmpty
+            hijasDe(folderId, todas).isEmpty && lista.isEmpty && grupo.soloLectura
+                ? const Aviso(icono: Icons.folder_open_outlined, texto: 'Esta carpeta está vacía')
+                : hijasDe(folderId, todas).isEmpty && lista.isEmpty
                 ? _CarpetaVacia(
                     enRaiz: folderId == null,
                     onSubir: () => elegirYSubir(context, ref,
@@ -112,6 +114,7 @@ class _ExploradorState extends ConsumerState<_Explorador> {
                       archivos: lista,
                       miId: miId,
                       soyAdmin: grupo.soyAdmin,
+                      soloLectura: grupo.soloLectura,
                       onAbrirCarpeta: (c) => _abrirCarpeta(c.id),
                       seleccionadoId: conPanel ? _seleccionado : null,
                       onSeleccionar: conPanel ? (a) => setState(() => _seleccionado = a.id) : null,
@@ -169,7 +172,7 @@ class _ExploradorState extends ConsumerState<_Explorador> {
               onPressed: () => _menuNuevo(lista, miId),
             ),
       // Arrastrar y soltar archivos desde la PC (solo en la web).
-      body: !kIsWeb || carpetaNoExiste
+      body: !kIsWeb || carpetaNoExiste || grupo.soloLectura
           ? explorador
           : DropTarget(
               onDragEntered: (_) => setState(() => _arrastrando = true),

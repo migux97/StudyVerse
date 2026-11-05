@@ -11,6 +11,7 @@ import '../../files/domain/files_repository.dart';
 import '../../files/presentation/file_actions.dart';
 import '../../files/presentation/files_providers.dart';
 import '../domain/historial.dart';
+import '../../groups/presentation/groups_providers.dart';
 
 /// Historial de versiones a pantalla completa: las guardadas arriba, y el
 /// resto por día, con espacio para leer quién cambió qué.
@@ -166,6 +167,7 @@ class _VersionTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final soloLectura = ref.watch(soloLecturaProvider(archivo.groupId));
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final v = version;
@@ -248,12 +250,12 @@ class _VersionTile extends ConsumerWidget {
                 if (versiones.length > 1)
                   _item(_Accion.compararCon, Icons.difference_outlined, 'Comparar con la actual'),
                 const PopupMenuDivider(),
-                if (!v.guardada) _item(_Accion.guardar, Icons.bookmark_add_outlined, 'Guardar esta versión'),
-                if (v.guardada) _item(_Accion.renombrar, Icons.edit_outlined, 'Cambiar el nombre'),
-                if (v.guardada) _item(_Accion.quitar, Icons.bookmark_remove_outlined, 'Quitar de guardadas'),
+                if (!v.guardada && !soloLectura) _item(_Accion.guardar, Icons.bookmark_add_outlined, 'Guardar esta versión'),
+                if (v.guardada && !soloLectura) _item(_Accion.renombrar, Icons.edit_outlined, 'Cambiar el nombre'),
+                if (v.guardada && !soloLectura) _item(_Accion.quitar, Icons.bookmark_remove_outlined, 'Quitar de guardadas'),
                 const PopupMenuDivider(),
                 _item(_Accion.descargar, Icons.download_rounded, 'Descargar'),
-                if (!esActual) _item(_Accion.restaurar, Icons.restore_rounded, 'Restaurar esta versión'),
+                if (!esActual && !soloLectura) _item(_Accion.restaurar, Icons.restore_rounded, 'Restaurar esta versión'),
               ],
             ),
           ],

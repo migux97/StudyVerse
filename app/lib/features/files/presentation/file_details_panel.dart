@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../versiones/presentation/historial_screen.dart';
 import '../domain/file_item.dart';
 import '../../visor/presentation/visor_screen.dart';
+import '../../groups/presentation/groups_providers.dart';
 import 'file_actions.dart';
 import 'file_icon.dart';
 
@@ -86,7 +87,7 @@ class FileDetailsPanel extends ConsumerWidget {
               label: const Text('Descargar'),
               onPressed: () => abrirVersion(context, ref, v, a.nombre, descargar: true),
             ),
-            if (bloqueo == EstadoBloqueo.libre)
+            if (bloqueo == EstadoBloqueo.libre && !ref.watch(soloLecturaProvider(a.groupId)))
               OutlinedButton.icon(
                 icon: const Icon(Icons.lock_outline, size: 18),
                 label: const Text('Estoy editando'),

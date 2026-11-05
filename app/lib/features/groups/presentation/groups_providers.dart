@@ -32,6 +32,11 @@ final groupProvider = FutureProvider.family<Group, String>((ref, groupId) {
   return ref.watch(groupsRepositoryProvider).getGroup(groupId);
 });
 
+/// Si veo el grupo en solo lectura (soy su docente, no integrante).
+final soloLecturaProvider = Provider.family<bool, String>(
+  (ref, groupId) => ref.watch(groupProvider(groupId)).value?.soloLectura ?? false,
+);
+
 final groupMembersProvider = FutureProvider.family<List<GroupMember>, String>((ref, groupId) {
   ref.watch(groupsChangesProvider);
   return ref.watch(groupsRepositoryProvider).members(groupId);

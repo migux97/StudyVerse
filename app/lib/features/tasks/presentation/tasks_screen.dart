@@ -159,6 +159,9 @@ class _TareasState extends ConsumerState<_Tareas> {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Aviso(icono: Icons.error_outline, texto: e.toString()),
         data: (todas) {
+          if (todas.isEmpty && grupo.soloLectura) {
+            return const Aviso(icono: Icons.task_alt_outlined, texto: 'Este grupo todavía no cargó tareas');
+          }
           if (todas.isEmpty) {
             return Aviso(
               icono: Icons.task_alt_outlined,
@@ -184,7 +187,7 @@ class _TareasState extends ConsumerState<_Tareas> {
                 tarea: t,
                 ahora: ahora,
                 esMia: t.assignedTo == miId,
-                onTap: () => _editar(t, miId),
+                onTap: grupo.soloLectura ? null : () => _editar(t, miId),
                 onEstado: (e) => _cambiarEstado(t, e),
                 grupo: grupo,
                 miId: miId,
@@ -291,7 +294,7 @@ class _TareaTile extends StatelessWidget {
   final Task tarea;
   final DateTime ahora;
   final bool esMia;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final void Function(EstadoTarea) onEstado;
   final Group grupo;
   final String? miId;
@@ -332,6 +335,7 @@ class _TareaTile extends StatelessWidget {
           tooltip: tooltip,
           icon: Icon(icono, color: color),
           onPressed: switch (siguiente) {
+            _ when grupo.soloLectura => null,
             null => null,
             // El admin aprueba desde el círculo igual que con el botón.
             EstadoTarea.hecha when tarea.entregada => () => onRevisar(true),
@@ -379,7 +383,7 @@ class _TareaTile extends StatelessWidget {
               ),
           ]),
         ),
-        trailing: PopupMenuButton<EstadoTarea>(
+        trailing: grupo.soloLectura ? null : PopupMenuButton<EstadoTarea>(
           tooltip: 'Cambiar estado',
           onSelected: onEstado,
           itemBuilder: (_) => [

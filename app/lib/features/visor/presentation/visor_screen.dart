@@ -17,6 +17,7 @@ import '../../../core/widgets/confirm_dialog.dart';
 import '../../comentarios/presentation/comentarios_panel.dart';
 import 'visor_providers.dart';
 import 'vistas.dart';
+import '../../groups/presentation/groups_providers.dart';
 
 /// Abre un archivo dentro de la app: los documentos de StudyVerse en el
 /// editor; el resto, en el visor.
@@ -318,14 +319,17 @@ class _VisorScreenState extends ConsumerState<VisorScreen> {
         return conValor(ref.watch(docxProvider(v)), (ops) {
           if (ops == null) return sinVista();
           return Column(children: [
-            _Aviso(
-              texto: 'Vista de un archivo de Word. Para cambiarlo, hacé una copia editable.',
-              accion: TextButton.icon(
-                icon: const Icon(Icons.edit_note),
-                label: const Text('Editar en StudyVerse'),
-                onPressed: () => _convertirDocx(a, ops),
+            if (ref.watch(soloLecturaProvider(a.groupId)))
+              const _Aviso(texto: 'Vista de un archivo de Word.', accion: SizedBox.shrink())
+            else
+              _Aviso(
+                texto: 'Vista de un archivo de Word. Para cambiarlo, hacé una copia editable.',
+                accion: TextButton.icon(
+                  icon: const Icon(Icons.edit_note),
+                  label: const Text('Editar en StudyVerse'),
+                  onPressed: () => _convertirDocx(a, ops),
+                ),
               ),
-            ),
             Expanded(child: VistaDocumento(key: ValueKey(v.id), ops: ops)),
           ]);
         });
@@ -334,8 +338,10 @@ class _VisorScreenState extends ConsumerState<VisorScreen> {
               _Aviso(
                 texto: t.cortado
                     ? 'Es largo: mostramos el principio. Descargalo para verlo entero.'
-                    : 'Archivo de texto: lo podés cambiar acá.',
-                accion: t.cortado
+                    : ref.watch(soloLecturaProvider(a.groupId))
+                        ? 'Archivo de texto.'
+                        : 'Archivo de texto: lo podés cambiar acá.',
+                accion: t.cortado || ref.watch(soloLecturaProvider(a.groupId))
                     ? const SizedBox.shrink()
                     : TextButton.icon(
                         icon: const Icon(Icons.edit_outlined),

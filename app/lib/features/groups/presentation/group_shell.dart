@@ -8,6 +8,7 @@ import 'group_actions.dart';
 import 'group_dialogs.dart';
 import 'groups_providers.dart';
 import 'invite_card.dart';
+import '../../cursos/presentation/curso_acciones.dart';
 
 enum SeccionGrupo {
   archivos('Archivos', Icons.folder_outlined, Icons.folder),
@@ -94,22 +95,33 @@ class GroupShell extends StatelessWidget {
         leading: BackButton(
           onPressed: onBack ?? () => context.canPop() ? context.pop() : context.go(Routes.grupos),
         ),
-        title: Text(grupo.nombre),
+        title: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(grupo.nombre, overflow: TextOverflow.ellipsis),
+          if (grupo.cursoNombre != null)
+            Text(
+              [grupo.cursoNombre!, if (grupo.cursoDocente != null && !grupo.soloLectura) 'Prof. ${grupo.cursoDocente}']
+                  .join(' · '),
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+        ]),
         actions: [
-          IconButton(
-            tooltip: 'Invitar',
-            icon: const Icon(Icons.person_add_alt_outlined),
-            onPressed: () => _mostrarInvitacion(context),
-          ),
+          if (!grupo.soloLectura)
+            IconButton(
+              tooltip: 'Invitar',
+              icon: const Icon(Icons.person_add_alt_outlined),
+              onPressed: () => _mostrarInvitacion(context),
+            ),
           IconButton(
             tooltip: 'Integrantes',
             icon: const Icon(Icons.group_outlined),
             onPressed: () => context.push(Routes.miembros(grupo.id)),
           ),
-          _MenuGrupo(grupo: grupo),
+          if (grupo.soloLectura) _MenuDocente(grupo: grupo) else _MenuGrupo(grupo: grupo),
         ],
       ),
-      floatingActionButton: floatingActionButton,
+      // El docente no crea nada en el grupo.
+      floatingActionButton: grupo.soloLectura ? null : floatingActionButton,
       bottomNavigationBar: ancho
           ? null
           : NavigationBar(
@@ -136,11 +148,18 @@ class GroupShell extends StatelessWidget {
                 ],
               ),
               const VerticalDivider(width: 1),
-              Expanded(child: body),
+              Expanded(child: _conAviso(body)),
             ])
-          : body,
+          : _conAviso(body),
     );
   }
+
+  Widget _conAviso(Widget body) => grupo.soloLectura
+      ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          const BannerSoloLectura(),
+          Expanded(child: body),
+        ])
+      : body;
 
   void _mostrarInvitacion(BuildContext context) {
     showModalBottomSheet<void>(
@@ -187,7 +206,7 @@ class Aviso extends StatelessWidget {
   }
 }
 
-enum _Accion { telegram, papelera, editar, salir, eliminar }
+enum _Accion { telegram, papelera, editar, salir, eliminar, curso }
 
 class _MenuGrupo extends ConsumerWidget {
   const _MenuGrupo({required this.grupo});
@@ -201,6 +220,7 @@ class _MenuGrupo extends ConsumerWidget {
         _Accion.telegram => context.push(Routes.telegram(grupo.id)),
         _Accion.papelera => context.push(Routes.papelera(grupo.id)),
         _Accion.editar => editarGrupo(context, ref, grupo),
+        _Accion.curso => grupo.cursoId == null ? sumarACurso(context, ref, grupo) : quitarDelCurso(context, ref, grupo),
         _Accion.salir => salirDelGrupo(context, ref, grupo),
         _Accion.eliminar => eliminarGrupo(context, ref, grupo),
       },
@@ -218,6 +238,14 @@ class _MenuGrupo extends ConsumerWidget {
             value: _Accion.editar,
             child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Editar grupo')),
           ),
+        if (grupo.soyAdmin)
+          PopupMenuItem(
+            value: _Accion.curso,
+            child: ListTile(
+              leading: Icon(grupo.cursoId == null ? Icons.school_outlined : Icons.link_off),
+              title: Text(grupo.cursoId == null ? 'Sumar a un curso' : 'Quitar del curso'),
+            ),
+          ),
         const PopupMenuItem(
           value: _Accion.salir,
           child: ListTile(leading: Icon(Icons.logout), title: Text('Salir del grupo')),
@@ -228,6 +256,47 @@ class _MenuGrupo extends ConsumerWidget {
             child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Eliminar grupo')),
           ),
       ],
+    );
+  }
+}
+
+/// Para el docente: dejar de ver el grupo (lo saca del curso).
+class _MenuDocente extends ConsumerWidget {
+  const _MenuDocente({required this.grupo});
+  final Group grupo;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return PopupMenuButton<int>(
+      tooltip: 'Más opciones',
+      onSelected: (_) => quitarDelCurso(context, ref, grupo),
+      itemBuilder: (_) => const [
+        PopupMenuItem(value: 0, child: ListTile(leading: Icon(Icons.link_off), title: Text('Quitar del curso'))),
+      ],
+    );
+  }
+}
+
+/// Aviso arriba de todo cuando el docente mira un grupo.
+class BannerSoloLectura extends StatelessWidget {
+  const BannerSoloLectura({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(children: [
+          Icon(Icons.visibility_outlined, size: 18, color: scheme.onSecondaryContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text('Estás viendo este grupo como docente: podés leer y comentar.',
+                style: TextStyle(color: scheme.onSecondaryContainer)),
+          ),
+        ]),
+      ),
     );
   }
 }

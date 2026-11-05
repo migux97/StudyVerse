@@ -48,7 +48,7 @@ flutter build apk --dart-define-from-file=.env
 
 Funciones locales: `supabase/scripts/configurar-funciones-local.ps1` y después `npx supabase functions serve --env-file supabase/functions/.env`.
 
-Usuarios de prueba del seed: `ana@studyverse.test` y `juan@studyverse.test` (contraseña en `supabase/seed.sql`). Los correos de Auth (códigos) se leen en Mailpit: http://127.0.0.1:54324 (API: `/api/v1/messages`).
+Usuarios de prueba del seed: `ana@studyverse.test`, `juan@studyverse.test` y la docente `profe@studyverse.test` (contraseña en `supabase/seed.sql`). Los correos de Auth (códigos) se leen en Mailpit: http://127.0.0.1:54324 (API: `/api/v1/messages`).
 
 ## Convenciones
 
@@ -72,6 +72,7 @@ Usuarios de prueba del seed: `ana@studyverse.test` y `juan@studyverse.test` (con
 - Documentos (`.svdoc`): el contenido es Delta de Quill (lista de ops). Para leerlo o convertirlo, usar `documentos/domain/delta.dart` (`lineasDe` / `opsDe`). El borrador en `documentos` solo vale mientras su autor tenga el bloqueo (`borradorVigente`); no mostrarlo como versión.
 - Visor: leer y convertir archivos en providers por versión (`visor_providers.dart`, con `compute`), nunca dentro de `build`. Todo zip (.docx/.xlsx/.pptx) se lee con `leerParte`, que pone tope a lo descomprimido.
 - En el editor, el `QuillController` se crea una vez y el documento se reemplaza solo desde `ref.listen` (en lectura); nunca reemplazarlo en cada build.
+- Docentes: `profiles.tipo_cuenta`; cursos en `cursos` y `groups.curso_id`. El docente lee los grupos de su curso por políticas "docente: …" (no por `is_group_member`), pero NO la tabla `groups` (tiene `invite_code`): usa `grupo_para_docente`, `grupos_del_curso` y `mis_cursos`. En la app, `Group.soloLectura` / `soloLecturaProvider` ocultan todo lo que escribe. Usuario de prueba: `profe@studyverse.test`.
 - Aprobación de tareas: `groups.aprobar_tareas`. El estado `entregada` y los datos de la entrega los pone la base (`entregar_tarea`, `revisar_tarea`, trigger `tasks_aprobacion`); con aprobación, solo un admin pasa a `hecha` o saca una tarea de `entregada`/`hecha`. El aviso a quien entregó va por `usuario:{id}:tareas` con solo el id.
 - Un valor nuevo de un enum va en su propia migración (no se puede usar en la misma transacción).
 - Materias: carpetas de la raíz con `es_materia` y `color` (0 a 7, `core/theme/colores_materia.dart`). Se crean con `crear_materia` o en `create_group(p_materias)`; se cambian con `editar_materia`. El cliente no inserta ni actualiza esas columnas. `groups.materia` es un dato viejo: no usarlo.

@@ -8,7 +8,8 @@ import '../domain/invite.dart';
 import '../../../core/realtime/canales.dart';
 
 /// El grupo con la cantidad de integrantes y sus materias.
-const _selectGrupo = '*, group_members(count), materias:folders(nombre, es_materia)';
+const _selectGrupo = '*, group_members(count), materias:folders(nombre, es_materia), '
+    'curso:cursos(nombre, docente:profiles(nombre))';
 
 class SupabaseGroupsRepository implements GroupsRepository {
   SupabaseGroupsRepository(this._client);
@@ -37,8 +38,12 @@ class SupabaseGroupsRepository implements GroupsRepository {
             .eq('group_id', groupId)
             .eq('groups.materias.es_materia', true)
             .maybeSingle();
-        if (row == null) throw const GroupFailure('No tenés acceso a este grupo');
-        return _grupoConRol(row);
+        if (row != null) return _grupoConRol(row);
+        // Sin ser integrante: el docente del curso lo ve en solo lectura (sin
+        // el código de invitación, por eso va por una función).
+        final grupo = await _client.rpc('grupo_para_docente', params: {'p_group_id': groupId});
+        if (grupo is! Map<String, dynamic>) throw const GroupFailure('No tenés acceso a este grupo');
+        return Group.fromMap(grupo, cantidadMiembros: (grupo['cantidad_miembros'] as num?)?.toInt());
       });
 
   static Group _grupoConRol(Map<String, dynamic> row) {

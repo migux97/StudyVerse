@@ -34,11 +34,12 @@ class SupabaseAuthRepository implements AuthRepository {
     required String username,
     required String email,
     required String password,
+    TipoCuenta tipo = TipoCuenta.estudiante,
   }) =>
       _guard(() => _auth.signUp(
             email: email.trim(),
             password: password,
-            data: {'nombre': nombre.trim(), 'username': username.trim().toLowerCase()},
+            data: {'nombre': nombre.trim(), 'username': username.trim().toLowerCase(), 'tipo': tipo.name},
             emailRedirectTo: _redirect,
           ));
 

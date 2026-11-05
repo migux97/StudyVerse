@@ -10,6 +10,7 @@ import '../domain/validators.dart';
 import 'auth_providers.dart';
 import 'campos.dart';
 import 'google_button.dart';
+import '../domain/profile.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -27,6 +28,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _confirmar = TextEditingController();
   bool _cargando = false;
   String? _errorEmail;
+  var _tipo = TipoCuenta.estudiante;
 
   @override
   void dispose() {
@@ -55,6 +57,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         username: _usuario.text,
         email: _email.text,
         password: _password.text,
+        tipo: _tipo,
       );
       if (mounted) context.go(Routes.codigo(MotivoCodigo.registro, from: _from), extra: _email.text.trim());
     } on AuthFailure catch (e) {
@@ -82,6 +85,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Como en la mayoría de las apps: primero, quién sos.
+              Text('¿Cómo vas a usar StudyVerse?', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 8),
+              SegmentedButton<TipoCuenta>(
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(value: TipoCuenta.estudiante, label: Text('Soy estudiante'), icon: Icon(Icons.backpack_outlined)),
+                  ButtonSegment(value: TipoCuenta.docente, label: Text('Soy docente'), icon: Icon(Icons.school_outlined)),
+                ],
+                selected: {_tipo},
+                onSelectionChanged: (s) => setState(() => _tipo = s.single),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 6, 4, 16),
+                child: Text(
+                  _tipo == TipoCuenta.docente
+                      ? 'Creás cursos y ves los grupos de tu clase: archivos, tareas y aportes.'
+                      : 'Armás grupos con tus compañeros para los TPs.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                ),
+              ),
               TextFormField(
                 controller: _nombre,
                 decoration: const InputDecoration(labelText: 'Nombre y apellido', hintText: 'Ana García'),

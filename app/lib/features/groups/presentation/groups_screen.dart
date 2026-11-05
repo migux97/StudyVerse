@@ -9,6 +9,7 @@ import '../domain/group.dart';
 import 'group_dialogs.dart';
 import 'groups_providers.dart';
 import '../../inicio/presentation/inicio_secciones.dart';
+import '../../cursos/presentation/inicio_docente.dart';
 
 /// Pantalla principal: los grupos del usuario, como carpetas.
 class GroupsScreen extends ConsumerWidget {
@@ -17,6 +18,8 @@ class GroupsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final perfil = ref.watch(currentProfileProvider).value;
+    // Los docentes arrancan en sus cursos.
+    if (perfil?.esDocente ?? false) return const InicioDocente();
     final grupos = ref.watch(myGroupsProvider);
 
     return Scaffold(

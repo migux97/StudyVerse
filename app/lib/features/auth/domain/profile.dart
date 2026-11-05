@@ -1,5 +1,14 @@
 enum Plan { free, premium }
 
+/// Lo que se elige al registrarse.
+enum TipoCuenta {
+  estudiante('Estudiante'),
+  docente('Docente');
+
+  const TipoCuenta(this.etiqueta);
+  final String etiqueta;
+}
+
 class Profile {
   const Profile({
     required this.id,
@@ -10,6 +19,7 @@ class Profile {
     this.universidad,
     this.plan = Plan.free,
     required this.createdAt,
+    this.tipo = TipoCuenta.estudiante,
   });
 
   final String id;
@@ -24,6 +34,9 @@ class Profile {
   final String? universidad;
   final Plan plan;
   final DateTime createdAt;
+  final TipoCuenta tipo;
+
+  bool get esDocente => tipo == TipoCuenta.docente;
 
   /// Iniciales para el avatar cuando no hay foto ("Ana María" → "AM").
   String get iniciales {
@@ -53,18 +66,21 @@ class Profile {
         universidad: map['universidad'] as String?,
         plan: Plan.values.byName(map['plan'] as String? ?? 'free'),
         createdAt: DateTime.parse(map['created_at'] as String),
+        tipo: map['tipo_cuenta'] == 'docente' ? TipoCuenta.docente : TipoCuenta.estudiante,
       );
 }
 
 /// Campos editables del perfil. `null` = no cambiar; '' = borrar (carrera y universidad).
 class CambiosPerfil {
-  const CambiosPerfil({this.nombre, this.username, this.carrera, this.universidad});
+  const CambiosPerfil({this.nombre, this.username, this.carrera, this.universidad, this.tipo});
   final String? nombre;
   final String? username;
   final String? carrera;
   final String? universidad;
+  final TipoCuenta? tipo;
 
   Map<String, dynamic> toMap() => {
+        if (tipo != null) 'tipo_cuenta': tipo!.name,
         if (nombre != null) 'nombre': nombre!.trim(),
         if (username != null) 'username': username!.trim().toLowerCase(),
         if (carrera != null) 'carrera': carrera!.trim().isEmpty ? null : carrera!.trim(),

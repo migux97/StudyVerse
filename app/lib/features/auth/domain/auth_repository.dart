@@ -43,6 +43,7 @@ abstract interface class AuthRepository {
     required String username,
     required String email,
     required String password,
+    TipoCuenta tipo = TipoCuenta.estudiante,
   });
 
   Future<bool> usernameDisponible(String username);
