@@ -14,6 +14,7 @@ import '../../files/presentation/file_actions.dart';
 import '../../files/presentation/file_icon.dart';
 import '../../files/presentation/files_providers.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../comentarios/presentation/comentarios_panel.dart';
 import 'visor_providers.dart';
 import 'vistas.dart';
 
@@ -48,6 +49,18 @@ class _VisorScreenState extends ConsumerState<VisorScreen> {
   TextEditingController? _edicion;
   String _original = '';
   bool _guardando = false;
+
+  /// Panel de comentarios abierto al costado (pantallas anchas).
+  bool _comentarios = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Queda en "Recientes".
+    ref.read(filesRepositoryProvider).marcarVisto(widget.fileId).then((_) {
+      if (mounted) ref.invalidate(recientesProvider);
+    }, onError: (_) {});
+  }
 
   @override
   void dispose() {
@@ -210,6 +223,13 @@ class _VisorScreenState extends ConsumerState<VisorScreen> {
                 ),
               ),
             ] else ...[
+              BotonComentarios(
+                groupId: a.groupId,
+                fileId: a.id,
+                alAlternarPanel: MediaQuery.sizeOf(context).width >= 1100
+                    ? () => setState(() => _comentarios = !_comentarios)
+                    : null,
+              ),
               descargar,
               PopupMenuButton<String>(
                 tooltip: 'Más opciones',
@@ -226,13 +246,34 @@ class _VisorScreenState extends ConsumerState<VisorScreen> {
             ],
           ],
         ),
-        body: v == null
-            ? const SinVista(motivo: 'Este archivo todavía no tiene versiones.')
-            : editando
-                ? _EditorTexto(controller: _edicion!, codigo: a.kind == FileKind.codigo)
-                : _contenido(context, a, v),
+        body: _conPanel(
+          context,
+          a,
+          v == null
+              ? const SinVista(motivo: 'Este archivo todavía no tiene versiones.')
+              : editando
+                  ? _EditorTexto(controller: _edicion!, codigo: a.kind == FileKind.codigo)
+                  : _contenido(context, a, v),
+        ),
       ),
     );
+  }
+
+  /// En pantallas anchas, los comentarios al costado del archivo.
+  Widget _conPanel(BuildContext context, FileItem a, Widget cuerpo) {
+    if (!_comentarios || MediaQuery.sizeOf(context).width < 1100) return cuerpo;
+    return Row(children: [
+      Expanded(child: cuerpo),
+      const VerticalDivider(width: 1),
+      SizedBox(
+        width: 360,
+        child: ComentariosPanel(
+          groupId: a.groupId,
+          fileId: a.id,
+          alCerrar: () => setState(() => _comentarios = false),
+        ),
+      ),
+    ]);
   }
 
   Widget _contenido(BuildContext context, FileItem a, FileVersion v) {

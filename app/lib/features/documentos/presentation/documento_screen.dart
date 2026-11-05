@@ -17,6 +17,7 @@ import '../../files/presentation/files_providers.dart';
 import '../domain/docx.dart';
 import '../domain/documento.dart';
 import '../domain/pdf_export.dart';
+import '../../comentarios/presentation/comentarios_panel.dart';
 import 'documentos_providers.dart';
 
 enum _Guardado { alDia, guardando, sinConexion }
@@ -69,10 +70,17 @@ class _DocumentoScreenState extends ConsumerState<DocumentoScreen> {
   /// Se toma al empezar: en dispose ya no se puede usar ref.
   late final DocumentosRepository _docs;
 
+  /// Panel de comentarios abierto al costado (pantallas anchas).
+  bool _comentarios = false;
+
   @override
   void initState() {
     super.initState();
     _docs = ref.read(documentosRepositoryProvider);
+    // Queda en "Recientes".
+    ref.read(filesRepositoryProvider).marcarVisto(widget.fileId).then((_) {
+      if (mounted) ref.invalidate(recientesProvider);
+    }, onError: (_) {});
   }
 
   @override
@@ -319,6 +327,14 @@ class _DocumentoScreenState extends ConsumerState<DocumentoScreen> {
                 ),
               ),
             if (a != null)
+              BotonComentarios(
+                groupId: a.groupId,
+                fileId: a.id,
+                alAlternarPanel: MediaQuery.sizeOf(context).width >= 1100
+                    ? () => setState(() => _comentarios = !_comentarios)
+                    : null,
+              ),
+            if (a != null)
               PopupMenuButton<String>(
                 tooltip: 'Más opciones',
                 onSelected: (op) => switch (op) {
@@ -343,7 +359,9 @@ class _DocumentoScreenState extends ConsumerState<DocumentoScreen> {
               if (_editando) _BarraFormato(controller: _ctrl!),
               if (estado == EstadoBloqueo.deOtro && a != null) _AvisoOtro(archivo: a),
               Expanded(
-                child: PaginaDocumento(
+                child: Row(children: [
+                  Expanded(
+                    child: PaginaDocumento(
                   scrollController: _scroll,
                   alTocarFondo: _editando ? _foco.requestFocus : null,
                   child: QuillEditor(
@@ -357,7 +375,20 @@ class _DocumentoScreenState extends ConsumerState<DocumentoScreen> {
                       expands: false,
                     ),
                   ),
-                ),
+                    ),
+                  ),
+                  if (_comentarios && a != null && MediaQuery.sizeOf(context).width >= 1100) ...[
+                    const VerticalDivider(width: 1),
+                    SizedBox(
+                      width: 360,
+                      child: ComentariosPanel(
+                        groupId: a.groupId,
+                        fileId: a.id,
+                        alCerrar: () => setState(() => _comentarios = false),
+                      ),
+                    ),
+                  ],
+                ]),
               ),
             ]),
         },

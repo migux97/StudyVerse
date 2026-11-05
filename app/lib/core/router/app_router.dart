@@ -12,6 +12,9 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/profile_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/activity/presentation/activity_screen.dart';
+import '../../features/calendario/presentation/calendario_screen.dart';
+import '../../features/files/presentation/papelera_screen.dart';
+import '../../features/inicio/presentation/buscar_screen.dart';
 import '../../features/documentos/presentation/documento_screen.dart';
 import '../../features/groups/presentation/group_screen.dart';
 import '../../features/groups/presentation/groups_screen.dart';
@@ -28,6 +31,8 @@ class Routes {
   static const grupos = '/';
   static const perfil = '/perfil';
   static const dispositivos = '/perfil/dispositivos';
+  static const buscar = '/buscar';
+  static const calendario = '/calendario';
 
   /// Pantalla del código por mail. El email va como `extra` (no en la URL).
   static String codigo(MotivoCodigo motivo, {String? from}) => conDestino('/codigo/${motivo.name}', from);
@@ -39,6 +44,7 @@ class Routes {
   static String actividad(String id) => '/grupos/$id/actividad';
   static String aportes(String id) => '/grupos/$id/aportes';
   static String telegram(String id) => '/grupos/$id/telegram';
+  static String papelera(String id) => '/grupos/$id/papelera';
   static String archivo(String grupoId, String fileId) => '/grupos/$grupoId/archivos/$fileId';
   static String documento(String grupoId, String fileId) => '/grupos/$grupoId/documentos/$fileId';
   static String unirse(String codigo) => '/unirse/$codigo';
@@ -91,6 +97,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(path: Routes.grupos, builder: (_, _) => const GroupsScreen()),
+      GoRoute(path: Routes.buscar, builder: (_, _) => const BuscarScreen()),
+      GoRoute(path: Routes.calendario, builder: (_, _) => const CalendarioScreen()),
       GoRoute(
         path: Routes.perfil,
         builder: (_, _) => const ProfileScreen(),
@@ -111,6 +119,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: 'documentos/:fileId',
             builder: (_, s) => DocumentoScreen(groupId: s.pathParameters['id']!, fileId: s.pathParameters['fileId']!),
+          ),
+          GoRoute(
+            path: 'papelera',
+            builder: (_, s) => PapeleraScreen(groupId: s.pathParameters['id']!),
           ),
           GoRoute(
             path: 'telegram',

@@ -1,9 +1,12 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' show FlutterQuillLocalizations;
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
+import 'features/comentarios/domain/comentario.dart';
+import 'features/comentarios/presentation/comentarios_providers.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_mode.dart';
 import 'core/widgets/avisos.dart';
@@ -21,6 +24,9 @@ class StudyVerseApp extends ConsumerWidget {
     ref.listen(pedidosEntrantesProvider, (_, pedido) {
       if (pedido case AsyncData(:final value)) _avisarPedido(ref, value);
     });
+    ref.listen(mencionesProvider, (_, next) {
+      if (next.value case final c?) _avisarMencion(ref, c);
+    });
 
     return MaterialApp.router(
       title: 'StudyVerse',
@@ -33,7 +39,32 @@ class StudyVerseApp extends ConsumerWidget {
       supportedLocales: const [Locale('es', 'AR'), Locale('es')],
       localizationsDelegates: const [...GlobalMaterialLocalizations.delegates, FlutterQuillLocalizations.delegate],
       routerConfig: ref.watch(routerProvider),
+      // En la web de PC, las listas que se deslizan de costado también se
+      // arrastran con el mouse.
+      scrollBehavior: const MaterialScrollBehavior().copyWith(
+        dragDevices: {...const MaterialScrollBehavior().dragDevices, PointerDeviceKind.mouse},
+      ),
     );
+  }
+
+  void _avisarMencion(WidgetRef ref, Comentario c) {
+    final ctx = scaffoldMessengerKey.currentContext;
+    final messenger = scaffoldMessengerKey.currentState;
+    if (ctx == null || messenger == null) return;
+    final archivo = nombreVisible(c.archivo ?? 'un archivo');
+    final destino = fileKindFor(c.archivo ?? '') == FileKind.studyverse
+        ? Routes.documento(c.groupId, c.fileId)
+        : Routes.archivo(c.groupId, c.fileId);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(aviso(
+        ctx,
+        '${c.autor?.nombre ?? 'Alguien'} te mencionó en «$archivo»',
+        duracion: const Duration(seconds: 12),
+        cerrable: true,
+        accion: 'Ver',
+        alTocar: () => ref.read(routerProvider).push(destino),
+      ));
   }
 
   void _avisarPedido(WidgetRef ref, PedidoEntrante p) {
