@@ -10,6 +10,15 @@ abstract interface class TasksRepository {
   Future<void> create(String groupId, TaskDraft draft);
   Future<void> update(String taskId, TaskDraft draft);
   Future<void> setEstado(String taskId, EstadoTarea estado);
+
+  /// La marca como entregada (con una nota opcional).
+  Future<void> entregar(String taskId, {String? nota});
+
+  /// Un admin aprueba la entrega, o pide cambios con una [nota].
+  Future<void> revisar(String taskId, {required bool aprobar, String? nota});
+
+  /// Avisos de revisión de mis entregas, en vivo.
+  Stream<Revision> revisiones(String miId);
   Future<void> delete(String taskId);
 
   /// Tareas completadas y versiones subidas por integrante.

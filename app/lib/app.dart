@@ -13,6 +13,8 @@ import 'core/widgets/avisos.dart';
 import 'features/files/domain/file_item.dart';
 import 'features/files/domain/files_repository.dart';
 import 'features/files/presentation/files_providers.dart';
+import 'features/tasks/domain/task.dart';
+import 'features/tasks/presentation/tasks_providers.dart';
 
 /// Para mostrar avisos que no dependen de la pantalla actual.
 class StudyVerseApp extends ConsumerWidget {
@@ -26,6 +28,9 @@ class StudyVerseApp extends ConsumerWidget {
     });
     ref.listen(mencionesProvider, (_, next) {
       if (next.value case final c?) _avisarMencion(ref, c);
+    });
+    ref.listen(revisionesProvider, (_, next) {
+      if (next.value case final r?) _avisarRevision(ref, r);
     });
 
     return MaterialApp.router(
@@ -64,6 +69,22 @@ class StudyVerseApp extends ConsumerWidget {
         cerrable: true,
         accion: 'Ver',
         alTocar: () => ref.read(routerProvider).push(destino),
+      ));
+  }
+
+  void _avisarRevision(WidgetRef ref, Revision r) {
+    final ctx = scaffoldMessengerKey.currentContext;
+    final messenger = scaffoldMessengerKey.currentState;
+    if (ctx == null || messenger == null) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(aviso(
+        ctx,
+        r.mensaje,
+        duracion: const Duration(seconds: 12),
+        cerrable: true,
+        accion: 'Ver',
+        alTocar: () => ref.read(routerProvider).push(Routes.tareas(r.groupId)),
       ));
   }
 

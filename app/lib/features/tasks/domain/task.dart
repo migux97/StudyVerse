@@ -3,6 +3,9 @@ import '../../groups/domain/group.dart';
 enum EstadoTarea {
   pendiente('Pendiente'),
   enProgreso('En progreso'),
+
+  /// Lista, esperando que un admin la apruebe (si el grupo lo pide).
+  entregada('Entregada'),
   hecha('Hecha');
 
   const EstadoTarea(this.etiqueta);
@@ -29,6 +32,11 @@ class Task {
     this.completedAt,
     this.createdBy,
     required this.createdAt,
+    this.entregadaPor,
+    this.entregadaPorNombre,
+    this.entregadaAt,
+    this.entregaNota,
+    this.revisionNota,
   });
 
   final String id;
@@ -46,7 +54,17 @@ class Task {
   final String? createdBy;
   final DateTime createdAt;
 
+  /// Quién la entregó, cuándo y qué dejó dicho.
+  final String? entregadaPor;
+  final String? entregadaPorNombre;
+  final DateTime? entregadaAt;
+  final String? entregaNota;
+
+  /// Lo que pidió cambiar un admin (hasta que se vuelva a entregar).
+  final String? revisionNota;
+
   bool get hecha => estado == EstadoTarea.hecha;
+  bool get entregada => estado == EstadoTarea.entregada;
 
   /// Fila de `tasks`, con `assignee:profiles(nombre)` y `folder:folders(nombre)`.
   factory Task.fromMap(Map<String, dynamic> map) => Task(
@@ -62,7 +80,40 @@ class Task {
         completedAt: map['completed_at'] == null ? null : DateTime.parse(map['completed_at'] as String),
         createdBy: map['created_by'] as String?,
         createdAt: DateTime.parse(map['created_at'] as String),
+        entregadaPor: map['entregada_por'] as String?,
+        entregadaPorNombre: (map['entregador'] as Map<String, dynamic>?)?['nombre'] as String?,
+        entregadaAt: map['entregada_at'] == null ? null : DateTime.parse(map['entregada_at'] as String),
+        entregaNota: map['entrega_nota'] as String?,
+        revisionNota: map['revision_nota'] as String?,
       );
+}
+
+/// Aviso en vivo a quien entregó: un admin aprobó su tarea o pidió cambios.
+class Revision {
+  const Revision({
+    required this.taskId,
+    required this.titulo,
+    required this.groupId,
+    required this.aprobada,
+    required this.por,
+  });
+
+  final String taskId;
+  final String titulo;
+  final String groupId;
+  final bool aprobada;
+  final String por;
+
+  /// Fila de `tasks` releída después del aviso, con `revisor:profiles(nombre)`.
+  factory Revision.fromMap(Map<String, dynamic> m) => Revision(
+        taskId: m['id'] as String,
+        titulo: m['titulo'] as String? ?? 'tu tarea',
+        groupId: m['group_id'] as String,
+        aprobada: m['estado'] == 'hecha',
+        por: (m['revisor'] as Map<String, dynamic>?)?['nombre'] as String? ?? 'Un admin',
+      );
+
+  String get mensaje => aprobada ? '$por aprobó «$titulo»' : '$por te pidió cambios en «$titulo»';
 }
 
 /// Datos editables de una tarea (crear o editar).

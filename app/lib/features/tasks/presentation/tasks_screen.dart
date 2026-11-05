@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/forms/validar.dart';
 import '../../../core/widgets/auth_layout.dart';
 import '../../../core/widgets/confirm_dialog.dart';
+import '../../../core/widgets/text_input_dialog.dart';
 import '../../auth/presentation/auth_providers.dart';
 import '../../groups/domain/group.dart';
+import '../../groups/domain/groups_repository.dart';
 import '../../groups/presentation/group_shell.dart';
+import '../../groups/presentation/groups_providers.dart';
 import '../domain/task.dart';
 import '../domain/tasks_repository.dart';
 import 'task_form_dialog.dart';
@@ -34,12 +38,15 @@ class _TareasState extends ConsumerState<_Tareas> {
 
   Group get grupo => widget.grupo;
 
-  Future<void> _intentar(Future<void> Function() accion) async {
+  /// Devuelve si salió bien (si no, ya mostró el error).
+  Future<bool> _intentar(Future<void> Function() accion) async {
     try {
       await accion();
       ref.invalidate(tasksProvider(grupo.id));
+      return true;
     } on TasksFailure catch (e) {
       if (mounted) mostrarMensaje(context, e.mensaje, error: true);
+      return false;
     }
   }
 
@@ -56,6 +63,7 @@ class _TareasState extends ConsumerState<_Tareas> {
       groupId: grupo.id,
       tarea: t,
       puedeEliminar: grupo.soyAdmin || t.createdBy == miId,
+      puedeCerrar: grupo.puedoCerrarTareas,
     );
     switch (r) {
       case GuardarTarea(:final draft):
@@ -70,8 +78,68 @@ class _TareasState extends ConsumerState<_Tareas> {
     }
   }
 
-  void _cambiarEstado(Task t, EstadoTarea estado) =>
-      _intentar(() => ref.read(tasksRepositoryProvider).setEstado(t.id, estado));
+  void _cambiarEstado(Task t, EstadoTarea estado) {
+    if (estado == t.estado) return;
+    // Un admin que pasa a hecha una entregada la está aprobando.
+    if (estado == EstadoTarea.hecha && t.entregada && grupo.soyAdmin) {
+      _revisar(t, aprobar: true);
+      return;
+    }
+    // Con aprobación, "hecha" de alguien que no es admin = entregarla.
+    if (estado == EstadoTarea.entregada || (estado == EstadoTarea.hecha && !grupo.puedoCerrarTareas)) {
+      _entregar(t);
+      return;
+    }
+    _intentar(() => ref.read(tasksRepositoryProvider).setEstado(t.id, estado));
+  }
+
+  Future<void> _entregar(Task t) async {
+    final nota = await pedirTexto(
+      context,
+      titulo: 'Entregar "${t.titulo}"',
+      etiqueta: 'Nota para quien la revisa (opcional)',
+      ejemplo: 'Ej.: Lo subí a la carpeta TP 2',
+      ayuda: grupo.aprobarTareas ? 'Un admin la revisa y la aprueba.' : null,
+      accion: 'Entregar',
+      maximo: 500,
+      validator: Validar.opcional(500),
+    );
+    if (nota == null || !mounted) return;
+    final ok = await _intentar(() => ref.read(tasksRepositoryProvider).entregar(t.id, nota: nota));
+    if (ok && mounted) mostrarMensaje(context, 'Entregaste «${t.titulo}»');
+  }
+
+  Future<void> _revisar(Task t, {required bool aprobar}) async {
+    String? nota;
+    if (!aprobar) {
+      nota = await pedirTexto(
+        context,
+        titulo: 'Pedir cambios',
+        etiqueta: 'Qué hay que cambiar',
+        ejemplo: 'Ej.: Falta la bibliografía',
+        ayuda: 'La tarea vuelve a "En progreso" y le avisamos a quien la entregó.',
+        accion: 'Pedir cambios',
+        maximo: 500,
+        validator: Validar.texto(vacio: 'Contale qué hay que cambiar', max: 500),
+      );
+      if (nota == null || !mounted) return;
+    }
+    final ok =
+        await _intentar(() => ref.read(tasksRepositoryProvider).revisar(t.id, aprobar: aprobar, nota: nota));
+    if (ok && mounted) mostrarMensaje(context, aprobar ? 'Aprobaste «${t.titulo}»' : 'Le pediste cambios');
+  }
+
+  Future<void> _setAprobar(bool v) async {
+    try {
+      await ref.read(groupsRepositoryProvider).setAprobarTareas(grupo.id, v);
+      ref.invalidate(groupProvider(grupo.id));
+      if (mounted) {
+        mostrarMensaje(context, v ? 'Ahora un admin aprueba las tareas' : 'Ya no hace falta aprobar las tareas');
+      }
+    } on GroupFailure catch (e) {
+      if (mounted) mostrarMensaje(context, e.mensaje, error: true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -108,6 +176,7 @@ class _TareasState extends ConsumerState<_Tareas> {
           List<Task> de(EstadoTarea e) => ordenarTareas(visibles.where((t) => t.estado == e));
           final pendientes = de(EstadoTarea.pendiente);
           final enProgreso = de(EstadoTarea.enProgreso);
+          final entregadas = de(EstadoTarea.entregada);
           final hechas = de(EstadoTarea.hecha);
           final ahora = DateTime.now();
 
@@ -117,6 +186,9 @@ class _TareasState extends ConsumerState<_Tareas> {
                 esMia: t.assignedTo == miId,
                 onTap: () => _editar(t, miId),
                 onEstado: (e) => _cambiarEstado(t, e),
+                grupo: grupo,
+                miId: miId,
+                onRevisar: (aprobar) => _revisar(t, aprobar: aprobar),
               );
 
           return Center(
@@ -136,7 +208,27 @@ class _TareasState extends ConsumerState<_Tareas> {
                       onSelectionChanged: (s) => setState(() => _soloMias = s.single),
                     ),
                   ),
-                  if (pendientes.isEmpty && enProgreso.isEmpty)
+                  if (grupo.soyAdmin)
+                    SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                      secondary: const Icon(Icons.verified_outlined),
+                      title: const Text('Las tareas las aprueba un admin'),
+                      subtitle: const Text('Quien hace una tarea la marca como entregada y un admin la aprueba'),
+                      value: grupo.aprobarTareas,
+                      onChanged: _setAprobar,
+                    )
+                  else if (grupo.aprobarTareas)
+                    const ListTile(
+                      contentPadding: EdgeInsets.symmetric(horizontal: 4),
+                      leading: Icon(Icons.verified_outlined),
+                      title: Text('En este grupo, un admin aprueba las tareas'),
+                      subtitle: Text('Cuando termines una, marcala como entregada'),
+                    ),
+                  if (entregadas.isNotEmpty) ...[
+                    _Titulo(grupo.soyAdmin ? 'Para revisar' : 'Entregadas', entregadas.length),
+                    ...entregadas.map(tile),
+                  ],
+                  if (pendientes.isEmpty && enProgreso.isEmpty && entregadas.isEmpty)
                     Padding(
                       padding: const EdgeInsets.all(24),
                       child: Text(
@@ -191,6 +283,9 @@ class _TareaTile extends StatelessWidget {
     required this.esMia,
     required this.onTap,
     required this.onEstado,
+    required this.grupo,
+    required this.miId,
+    required this.onRevisar,
   });
 
   final Task tarea;
@@ -198,6 +293,9 @@ class _TareaTile extends StatelessWidget {
   final bool esMia;
   final VoidCallback onTap;
   final void Function(EstadoTarea) onEstado;
+  final Group grupo;
+  final String? miId;
+  final void Function(bool aprobar) onRevisar;
 
   @override
   Widget build(BuildContext context) {
@@ -208,18 +306,37 @@ class _TareaTile extends StatelessWidget {
     final (icono, color) = switch (tarea.estado) {
       EstadoTarea.pendiente => (Icons.radio_button_unchecked, scheme.outline),
       EstadoTarea.enProgreso => (Icons.timelapse, scheme.tertiary),
+      EstadoTarea.entregada => (Icons.outbox, scheme.secondary),
       EstadoTarea.hecha => (Icons.check_circle, scheme.primary),
     };
+    final puedeCerrar = grupo.puedoCerrarTareas;
+    // Qué hace tocar el círculo.
+    final (tooltip, siguiente) = switch (tarea.estado) {
+      EstadoTarea.hecha => ('Marcar como pendiente', EstadoTarea.pendiente),
+      EstadoTarea.entregada when puedeCerrar => ('Aprobar', EstadoTarea.hecha),
+      EstadoTarea.entregada => ('Esperando que un admin la apruebe', null),
+      _ when puedeCerrar => ('Marcar como hecha', EstadoTarea.hecha),
+      _ => ('Entregar', EstadoTarea.entregada),
+    };
+    final entrego = tarea.entregadaPor == null
+        ? null
+        : tarea.entregadaPor == miId
+            ? 'Entregaste'
+            : 'Entregó ${tarea.entregadaPorNombre ?? 'un ex integrante'}';
+    final estiloNota = theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant);
 
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      child: ListTile(
+    final tile = ListTile(
         onTap: onTap,
         // Tocar el círculo la marca hecha (o la reabre); el menú da las 3 opciones.
         leading: IconButton(
-          tooltip: tarea.hecha ? 'Marcar como pendiente' : 'Marcar como hecha',
+          tooltip: tooltip,
           icon: Icon(icono, color: color),
-          onPressed: () => onEstado(tarea.hecha ? EstadoTarea.pendiente : EstadoTarea.hecha),
+          onPressed: switch (siguiente) {
+            null => null,
+            // El admin aprueba desde el círculo igual que con el botón.
+            EstadoTarea.hecha when tarea.entregada => () => onRevisar(true),
+            final s => () => onEstado(s),
+          },
         ),
         title: Text(
           tarea.titulo,
@@ -246,6 +363,20 @@ class _TareaTile extends StatelessWidget {
                 color: venc.atrasada ? scheme.error : (venc.pronto ? scheme.tertiary : null),
               ),
             if (tarea.folderNombre != null) _Dato(icono: Icons.folder_outlined, texto: tarea.folderNombre!),
+            if (tarea.entregada && entrego != null) _Dato(icono: Icons.outbox_outlined, texto: entrego),
+            if (tarea.entregada && tarea.entregaNota != null)
+              SizedBox(width: double.infinity, child: Text('"${tarea.entregaNota}"', style: estiloNota)),
+            if (!tarea.hecha && !tarea.entregada && tarea.revisionNota != null)
+              SizedBox(
+                width: double.infinity,
+                child: Text.rich(
+                  TextSpan(children: [
+                    TextSpan(text: 'Cambios pedidos: ', style: TextStyle(color: scheme.tertiary, fontWeight: FontWeight.w600)),
+                    TextSpan(text: tarea.revisionNota),
+                  ]),
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
           ]),
         ),
         trailing: PopupMenuButton<EstadoTarea>(
@@ -253,10 +384,38 @@ class _TareaTile extends StatelessWidget {
           onSelected: onEstado,
           itemBuilder: (_) => [
             for (final e in EstadoTarea.values)
-              CheckedPopupMenuItem(value: e, checked: e == tarea.estado, child: Text(e.etiqueta)),
+              if ((e != EstadoTarea.entregada || grupo.aprobarTareas || tarea.entregada) &&
+                  (e != EstadoTarea.hecha || puedeCerrar || tarea.hecha))
+                CheckedPopupMenuItem(
+                  value: e,
+                  checked: e == tarea.estado,
+                  child: Text(e == EstadoTarea.entregada && !tarea.entregada ? 'Entregar…' : e.etiqueta),
+                ),
           ],
         ),
-      ),
+      );
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        tile,
+        // El admin revisa desde acá (fuera del ListTile, para que entre en el celular).
+        if (tarea.entregada && grupo.soyAdmin)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(72, 0, 16, 12),
+            child: Wrap(spacing: 8, runSpacing: 8, children: [
+              FilledButton.tonalIcon(
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text('Aprobar'),
+                onPressed: () => onRevisar(true),
+              ),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.rate_review_outlined, size: 18),
+                label: const Text('Pedir cambios'),
+                onPressed: () => onRevisar(false),
+              ),
+            ]),
+          ),
+      ]),
     );
   }
 }

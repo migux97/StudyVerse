@@ -14,6 +14,9 @@ abstract interface class GroupsRepository {
   Future<Group> create({required String nombre, List<String> materias = const []});
   Future<Group> join(String codigo);
   Future<void> update(String groupId, {required String nombre});
+
+  /// Solo admin: si las tareas las tiene que aprobar un admin.
+  Future<void> setAprobarTareas(String groupId, bool aprobar);
   Future<String> regenerateInviteCode(String groupId);
   Future<void> removeMember(String groupId, String userId);
   Future<void> setRole(String groupId, String userId, GroupRole rol);

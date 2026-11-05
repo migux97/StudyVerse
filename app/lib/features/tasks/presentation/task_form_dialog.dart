@@ -25,17 +25,22 @@ Future<ResultadoTarea?> abrirFormularioTarea(
   required String groupId,
   Task? tarea,
   bool puedeEliminar = false,
+  bool puedeCerrar = true,
 }) =>
     showDialog<ResultadoTarea>(
       context: context,
-      builder: (_) => _TareaDialog(groupId: groupId, tarea: tarea, puedeEliminar: puedeEliminar),
+      builder: (_) =>
+          _TareaDialog(groupId: groupId, tarea: tarea, puedeEliminar: puedeEliminar, puedeCerrar: puedeCerrar),
     );
 
 class _TareaDialog extends ConsumerStatefulWidget {
-  const _TareaDialog({required this.groupId, this.tarea, required this.puedeEliminar});
+  const _TareaDialog({required this.groupId, this.tarea, required this.puedeEliminar, required this.puedeCerrar});
   final String groupId;
   final Task? tarea;
   final bool puedeEliminar;
+
+  /// Si puedo dejarla como hecha (con aprobación, solo un admin).
+  final bool puedeCerrar;
 
   @override
   ConsumerState<_TareaDialog> createState() => _TareaDialogState();
@@ -167,7 +172,12 @@ class _TareaDialogState extends ConsumerState<_TareaDialog> {
                 const SizedBox(height: 16),
                 SegmentedButton<EstadoTarea>(
                   segments: [
-                    for (final e in EstadoTarea.values) ButtonSegment(value: e, label: Text(e.etiqueta)),
+                    // "Entregada" se elige con "Entregar" (lleva nota); acá
+                    // solo aparece si ya lo está. "Hecha", si podés cerrarla.
+                    for (final e in EstadoTarea.values)
+                      if ((e != EstadoTarea.entregada || widget.tarea!.entregada) &&
+                          (e != EstadoTarea.hecha || widget.puedeCerrar || widget.tarea!.hecha))
+                        ButtonSegment(value: e, label: Text(e.etiqueta)),
                   ],
                   selected: {_estado},
                   onSelectionChanged: (s) => setState(() => _estado = s.single),

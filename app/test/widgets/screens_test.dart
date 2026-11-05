@@ -23,11 +23,11 @@ final _grupo = Group(
 );
 
 /// Pantallas sin Supabase: los providers devuelven datos fijos.
-List _overrides({List<Group> grupos = const [], List<Task> tareas = const []}) => [
+List _overrides({List<Group> grupos = const [], List<Task> tareas = const [], Group? grupo}) => [
       authStateProvider.overrideWith((ref) => Stream.value(const SessionUser(id: 'ana'))),
       currentProfileProvider.overrideWith(() => _PerfilFijo()),
       myGroupsProvider.overrideWith((ref) async => grupos),
-      groupProvider.overrideWith((ref, id) async => _grupo),
+      groupProvider.overrideWith((ref, id) async => grupo ?? _grupo),
       tasksProvider.overrideWith((ref, id) async => tareas),
     ];
 
@@ -104,5 +104,70 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Gráficos'), findsNothing);
     expect(find.text('Introducción'), findsOneWidget);
+  });
+
+  Group grupoConAprobacion({required bool admin}) => Group(
+        id: 'g',
+        nombre: 'TP Final',
+        inviteCode: 'ABCD2345',
+        createdAt: DateTime(2026),
+        miRol: admin ? GroupRole.admin : GroupRole.miembro,
+        aprobarTareas: true,
+      );
+
+  final entregada = Task(
+    id: 'intro',
+    groupId: 'g',
+    titulo: 'Introducción',
+    assignedTo: 'juan',
+    assignedNombre: 'Juan',
+    estado: EstadoTarea.entregada,
+    entregadaPor: 'juan',
+    entregadaPorNombre: 'Juan',
+    entregaNota: 'Está en la carpeta TP 2',
+    createdAt: DateTime(2026),
+  );
+
+  testWidgets('Con aprobación, el admin ve "Para revisar" y puede aprobar o pedir cambios', (tester) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [..._overrides(tareas: [entregada], grupo: grupoConAprobacion(admin: true))],
+      child: const MaterialApp(home: TasksScreen(groupId: 'g')),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Para revisar · 1'), findsOneWidget);
+    expect(find.text('Entregó Juan'), findsOneWidget);
+    expect(find.text('"Está en la carpeta TP 2"'), findsOneWidget);
+    expect(find.text('Aprobar'), findsOneWidget);
+    expect(find.text('Pedir cambios'), findsOneWidget);
+    expect(tester.widget<SwitchListTile>(find.byType(SwitchListTile)).value, isTrue);
+  });
+
+  testWidgets('Con aprobación, un integrante entrega en vez de marcar hecha', (tester) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        ..._overrides(
+          tareas: [_tarea('Gráficos', para: 'ana', nombre: 'Ana López'), entregada],
+          grupo: grupoConAprobacion(admin: false),
+        ),
+      ],
+      child: const MaterialApp(home: TasksScreen(groupId: 'g')),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.text('En este grupo, un admin aprueba las tareas'), findsOneWidget);
+    expect(find.text('Entregadas · 1'), findsOneWidget);
+    expect(find.text('Aprobar'), findsNothing, reason: 'solo el admin revisa');
+    expect(find.byType(SwitchListTile), findsNothing);
+
+    await tester.tap(find.byTooltip('Entregar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Entregar "Gráficos"'), findsOneWidget);
   });
 }

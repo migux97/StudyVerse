@@ -15,6 +15,7 @@ class Group {
     this.miRol,
     this.cantidadMiembros,
     this.materias = const [],
+    this.aprobarTareas = false,
   });
 
   final String id;
@@ -32,6 +33,12 @@ class Group {
 
   /// Nombres de las materias del grupo (sus carpetas de materia).
   final List<String> materias;
+
+  /// Las tareas las aprueba un admin (quien la hace la marca como entregada).
+  final bool aprobarTareas;
+
+  /// Con aprobación, solo un admin deja una tarea como hecha.
+  bool get puedoCerrarTareas => !aprobarTareas || soyAdmin;
 
   bool get soyAdmin => miRol == GroupRole.admin;
 
@@ -51,6 +58,7 @@ class Group {
           for (final m in (map['materias'] as List?) ?? const [])
             if (m is Map && (m['es_materia'] ?? true) == true) m['nombre'] as String,
         ]..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase())),
+        aprobarTareas: map['aprobar_tareas'] as bool? ?? false,
       );
 }
 

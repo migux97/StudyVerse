@@ -14,7 +14,8 @@ class SupabaseTasksRepository implements TasksRepository {
   Future<List<Task>> tasks(String groupId) => _guard(() async {
         final rows = await _client
             .from('tasks')
-            .select('*, assignee:profiles!tasks_assigned_to_fkey(nombre), folder:folders(nombre)')
+            .select('*, assignee:profiles!tasks_assigned_to_fkey(nombre), '
+                'entregador:profiles!tasks_entregada_por_fkey(nombre), folder:folders(nombre)')
             .eq('group_id', groupId);
         return rows.map(Task.fromMap).toList();
       });
@@ -33,6 +34,30 @@ class SupabaseTasksRepository implements TasksRepository {
   @override
   Future<void> setEstado(String taskId, EstadoTarea estado) =>
       _guard(() => _client.from('tasks').update({'estado': estado.valor}).eq('id', taskId));
+
+  @override
+  Future<void> entregar(String taskId, {String? nota}) =>
+      _guard(() => _client.rpc('entregar_tarea', params: {'p_task_id': taskId, 'p_nota': nota}));
+
+  @override
+  Future<void> revisar(String taskId, {required bool aprobar, String? nota}) => _guard(() =>
+      _client.rpc('revisar_tarea', params: {'p_task_id': taskId, 'p_aprobar': aprobar, 'p_nota': nota}));
+
+  @override
+  Stream<Revision> revisiones(String miId) =>
+      escucharCanal(_client, Canales.tareasDe(miId), evento: 'revision').asyncExpand((aviso) async* {
+        // El aviso trae solo el id: la tarea se lee con la RLS de siempre.
+        try {
+          final row = await _client
+              .from('tasks')
+              .select('id, titulo, group_id, estado, revisor:profiles!tasks_revisada_por_fkey(nombre)')
+              .eq('id', aviso['tarea'] as String)
+              .maybeSingle();
+          if (row != null) yield Revision.fromMap(row);
+        } on PostgrestException {
+          // Si ya no está o no la puedo ver, no hay nada que avisar.
+        }
+      });
 
   @override
   Future<void> delete(String taskId) => _guard(() async {
@@ -64,6 +89,7 @@ class SupabaseTasksRepository implements TasksRepository {
 String traducirErrorTareas(String? code, String message) => switch (code) {
       'P0001' => message,
       '42501' => 'No tenés permiso para hacer esto',
+      'P0002' => 'Esa tarea ya no existe',
       '23514' => 'El título no puede quedar vacío',
       _ => 'No se pudo guardar la tarea',
     };

@@ -18,6 +18,9 @@ abstract final class Canales {
   static String misGrupos(String userId) => 'usuario:$userId:grupos';
   static String pedidos(String userId) => 'usuario:$userId:pedidos';
   static String menciones(String userId) => 'usuario:$userId:menciones';
+
+  /// Revisiones de mis entregas (aprobada o con cambios pedidos).
+  static String tareasDe(String userId) => 'usuario:$userId:tareas';
 }
 
 /// Emite el payload de cada aviso `evento` que llega a `canal`.

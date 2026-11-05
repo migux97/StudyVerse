@@ -81,6 +81,13 @@ class SupabaseGroupsRepository implements GroupsRepository {
       _guard(() => _client.from('groups').update({'nombre': nombre.trim()}).eq('id', groupId));
 
   @override
+  Future<void> setAprobarTareas(String groupId, bool aprobar) => _guard(() async {
+        final filas =
+            await _client.from('groups').update({'aprobar_tareas': aprobar}).eq('id', groupId).select('id');
+        if (filas.isEmpty) throw const GroupFailure('Solo un admin puede cambiar esto');
+      });
+
+  @override
   Future<String> regenerateInviteCode(String groupId) => _guard(() async =>
       await _client.rpc('regenerate_invite_code', params: {'p_group_id': groupId}) as String);
 

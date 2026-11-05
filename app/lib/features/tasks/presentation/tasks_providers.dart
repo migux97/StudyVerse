@@ -21,6 +21,13 @@ final tasksProvider = FutureProvider.family<List<Task>, String>((ref, groupId) {
   return ref.watch(tasksRepositoryProvider).tasks(groupId);
 });
 
+/// "Ana aprobó tu tarea": avisos de revisión de mis entregas, en vivo.
+final revisionesProvider = StreamProvider<Revision>((ref) {
+  final miId = ref.watch(authStateProvider.select((s) => s.value?.id));
+  if (miId == null) return const Stream.empty();
+  return ref.watch(tasksRepositoryProvider).revisiones(miId);
+});
+
 /// Los aportes cambian con cualquier actividad (versiones, tareas, integrantes).
 final contributionsProvider = FutureProvider.family<List<Aporte>, String>((ref, groupId) {
   ref.watch(activityChangesProvider(groupId));
