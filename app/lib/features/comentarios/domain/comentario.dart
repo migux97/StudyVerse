@@ -15,6 +15,7 @@ class Comentario {
     this.menciones = const [],
     required this.createdAt,
     this.archivo,
+    this.cita,
   });
 
   final String id;
@@ -30,6 +31,9 @@ class Comentario {
   /// Nombre del archivo (solo en los avisos de mención).
   final String? archivo;
 
+  /// Fragmento del documento que comenta (si se comentó marcando el texto).
+  final String? cita;
+
   factory Comentario.fromMap(Map<String, dynamic> m) => Comentario(
         id: m['id'] as String,
         fileId: m['file_id'] as String,
@@ -38,6 +42,7 @@ class Comentario {
         texto: m['texto'] as String,
         menciones: [for (final u in (m['menciones'] as List? ?? const [])) u as String],
         createdAt: DateTime.parse(m['created_at'] as String),
+        cita: m['cita'] as String?,
         archivo: (m['archivo'] as Map<String, dynamic>?)?['nombre'] as String?,
       );
 }
@@ -74,7 +79,7 @@ List<({String texto, bool mencion})> partesDelTexto(String texto) {
 
 abstract interface class ComentariosRepository {
   Future<List<Comentario>> comentarios(String fileId);
-  Future<void> comentar({required String fileId, required String groupId, required String texto});
+  Future<void> comentar({required String fileId, required String groupId, required String texto, String? cita});
   Future<void> borrar(String id);
 
   /// Emite el id del archivo cada vez que cambian sus comentarios.

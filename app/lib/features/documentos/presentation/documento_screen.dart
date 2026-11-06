@@ -17,6 +17,7 @@ import '../../files/presentation/files_providers.dart';
 import '../domain/docx.dart';
 import '../domain/documento.dart';
 import '../domain/pdf_export.dart';
+import '../../comentarios/presentation/comentarios_providers.dart' show citaProvider;
 import '../../comentarios/presentation/comentarios_panel.dart';
 import 'documentos_providers.dart';
 import '../../groups/presentation/groups_providers.dart';
@@ -99,6 +100,17 @@ class _DocumentoScreenState extends ConsumerState<DocumentoScreen> {
 
   List<dynamic> get _ops => _ctrl!.document.toDelta().toJson();
 
+  /// Lo que se marca con el mouse o el dedo queda listo para comentarlo citándolo.
+  void _alSeleccionar() {
+    final c = _ctrl;
+    if (c == null || c.selection.isCollapsed || !c.selection.isValid) return;
+    final sel = c.selection;
+    var texto = c.document.getPlainText(sel.start, sel.end - sel.start).trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (texto.isEmpty) return;
+    if (texto.length > 500) texto = '${texto.substring(0, 499)}…';
+    ref.read(citaProvider(widget.fileId).notifier).poner(texto);
+  }
+
   void _escuchar() {
     _cambios?.cancel();
     _cambios = _ctrl!.document.changes.listen(_alEscribir);
@@ -113,6 +125,7 @@ class _DocumentoScreenState extends ConsumerState<DocumentoScreen> {
       selection: const TextSelection.collapsed(offset: 0),
       readOnly: true,
     );
+    _ctrl!.addListener(_alSeleccionar);
     _escuchar();
   }
 
@@ -262,6 +275,8 @@ class _DocumentoScreenState extends ConsumerState<DocumentoScreen> {
   Widget build(BuildContext context) {
     final archivo = ref.watch(fileProvider(_clave));
     final contenido = ref.watch(contenidoDocumentoProvider(_clave));
+    // Mantiene la cita mientras el documento está abierto (sin reconstruirlo).
+    ref.listen(citaProvider(widget.fileId), (_, _) {});
     ref.listen(contenidoDocumentoProvider(_clave), (_, next) {
       if (next.hasValue) _reemplazar(next.requireValue);
     });

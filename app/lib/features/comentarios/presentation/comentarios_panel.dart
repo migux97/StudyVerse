@@ -116,13 +116,15 @@ class _ComentariosPanelState extends ConsumerState<ComentariosPanel> {
     if (texto.isEmpty || _enviando) return;
     if (texto.length > 2000) return mostrarMensaje(context, 'Es muy largo: usá hasta 2000 caracteres');
     setState(() => _enviando = true);
+    final cita = ref.read(citaProvider(widget.fileId));
     try {
       await ref
           .read(comentariosRepositoryProvider)
-          .comentar(fileId: widget.fileId, groupId: widget.groupId, texto: texto);
+          .comentar(fileId: widget.fileId, groupId: widget.groupId, texto: texto, cita: cita);
       // La hoja se pudo cerrar mientras se enviaba.
       if (!mounted) return;
       _texto.clear();
+      ref.read(citaProvider(widget.fileId).notifier).poner(null);
       ref.invalidate(comentariosProvider((groupId: widget.groupId, fileId: widget.fileId)));
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scroll.hasClients) _scroll.animateTo(_scroll.position.maxScrollExtent, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
@@ -215,6 +217,24 @@ class _ComentariosPanelState extends ConsumerState<ComentariosPanel> {
             ]),
           ),
         const Divider(height: 1),
+        if (ref.watch(citaProvider(widget.fileId)) case final cita?)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 4, 0),
+            child: Row(children: [
+              Icon(Icons.format_quote, size: 18, color: scheme.primary),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text('Sobre «$cita»',
+                    maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: scheme.onSurfaceVariant)),
+              ),
+              IconButton(
+                tooltip: 'No citar',
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(Icons.close, size: 18),
+                onPressed: () => ref.read(citaProvider(widget.fileId).notifier).poner(null),
+              ),
+            ]),
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 8, 8, 12),
           child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -284,6 +304,15 @@ class _Burbuja extends StatelessWidget {
                 ),
             ]),
             const SizedBox(height: 2),
+            if (c.cita case final cita?)
+              Container(
+                margin: const EdgeInsets.only(bottom: 4),
+                padding: const EdgeInsets.fromLTRB(8, 2, 8, 2),
+                decoration: BoxDecoration(border: Border(left: BorderSide(color: scheme.primary, width: 3))),
+                child: Text('«$cita»',
+                    maxLines: 3, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: scheme.onSurfaceVariant, fontStyle: FontStyle.italic)),
+              ),
             SelectableText.rich(TextSpan(children: [
               for (final p in partesDelTexto(c.texto))
                 TextSpan(

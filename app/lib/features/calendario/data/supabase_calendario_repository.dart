@@ -15,7 +15,7 @@ class SupabaseCalendarioRepository implements CalendarioRepository {
 
   @override
   Future<List<FechaCalendario>> fechas(DateTime desde, DateTime hasta) => _guard(() async {
-        final (tareas, eventos) = await (
+        final (tareas, eventos, delCurso, trabajos, misGrupos) = await (
           _client
               .from('tasks')
               .select('id, titulo, due_date, estado, group_id, grupo:groups(nombre), $_carpeta')
@@ -26,10 +26,26 @@ class SupabaseCalendarioRepository implements CalendarioRepository {
               .select('*, grupo:groups(nombre), materia:folders(nombre, color, es_materia)')
               .gte('fecha', _fecha(desde))
               .lte('fecha', _fecha(hasta)),
+          // Lo que pone el docente para todo el curso.
+          _client
+              .from('fechas_curso')
+              .select('*, curso:cursos(nombre)')
+              .gte('fecha', _fecha(desde))
+              .lte('fecha', _fecha(hasta)),
+          _client
+              .from('trabajos')
+              .select('id, curso_id, titulo, vence_at, curso:cursos(nombre)')
+              .gte('vence_at', soloDia(desde).toUtc().toIso8601String())
+              .lt('vence_at', soloDia(hasta).add(const Duration(days: 1)).toUtc().toIso8601String()),
+          // Mi grupo en cada curso (el docente no lee groups: queda vacío).
+          _client.from('groups').select('id, curso_id').not('curso_id', 'is', null),
         ).wait;
+        final grupoEnCurso = {for (final g in misGrupos) g['curso_id'] as String: g['id'] as String};
         return [
           ...tareas.map(FechaCalendario.deTarea),
           ...eventos.map(FechaCalendario.deEvento),
+          for (final f in delCurso) FechaCalendario.deCurso(f, grupoDelCurso: grupoEnCurso[f['curso_id']]),
+          for (final t in trabajos) FechaCalendario.deTrabajo(t, grupoDelCurso: grupoEnCurso[t['curso_id']]),
         ];
       });
 

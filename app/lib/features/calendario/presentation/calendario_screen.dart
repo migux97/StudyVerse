@@ -310,10 +310,16 @@ class _FilaFecha extends ConsumerWidget {
           style: f.hecha ? const TextStyle(decoration: TextDecoration.lineThrough) : null,
         ),
         subtitle: Text(detalle, maxLines: 2, overflow: TextOverflow.ellipsis),
-        onTap: f.esTarea ? () => context.push(Routes.tareas(f.groupId)) : null,
-        trailing: f.esTarea
+        onTap: f.esTarea
+            ? () => context.push(Routes.tareas(f.groupId))
+            : f.ruta != null
+                ? () => context.push(f.ruta!)
+                : null,
+        trailing: f.esTarea || f.ruta != null
             ? const Icon(Icons.chevron_right)
-            : IconButton(
+            : f.delCurso
+                ? Tooltip(message: 'La puso tu docente', child: Icon(Icons.school_outlined, color: scheme.onSurfaceVariant))
+                : IconButton(
                 tooltip: 'Borrar evento',
                 icon: const Icon(Icons.delete_outline),
                 onPressed: () => _borrar(context, ref),

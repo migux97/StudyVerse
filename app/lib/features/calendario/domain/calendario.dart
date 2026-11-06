@@ -34,6 +34,8 @@ class FechaCalendario {
     this.creadoPor,
     this.materia,
     this.colorMateria,
+    this.delCurso = false,
+    this.ruta,
   });
 
   final String id;
@@ -56,6 +58,12 @@ class FechaCalendario {
   /// Materia del evento o de la carpeta de la tarea (si tiene), con su color.
   final String? materia;
   final int? colorMateria;
+
+  /// La puso el docente del curso (no se borra desde el calendario).
+  final bool delCurso;
+
+  /// Pantalla que abre al tocarla, si tiene.
+  final String? ruta;
 
   bool get esTarea => tipo == TipoFecha.tarea;
 
@@ -84,6 +92,40 @@ class FechaCalendario {
         materia: materiaDe(m['materia'])?.nombre,
         colorMateria: materiaDe(m['materia'])?.color,
       );
+
+  /// Fecha que cargó el docente para todo el curso. [grupoDelCurso] es mi grupo
+  /// en ese curso (null si soy el docente).
+  factory FechaCalendario.deCurso(Map<String, dynamic> m, {String? grupoDelCurso}) => FechaCalendario(
+        id: m['id'] as String,
+        tipo: TipoFecha.values.byName(m['tipo'] as String),
+        titulo: m['titulo'] as String,
+        dia: DateTime.parse(m['fecha'] as String),
+        hora: (m['hora'] as String?)?.substring(0, 5),
+        groupId: grupoDelCurso ?? '',
+        grupo: (m['curso'] as Map<String, dynamic>?)?['nombre'] as String? ?? 'Curso',
+        nota: m['nota'] as String?,
+        creadoPor: m['creado_por'] as String?,
+        delCurso: true,
+        ruta: grupoDelCurso == null ? '/cursos/${m['curso_id']}' : null,
+      );
+
+  /// Vencimiento de un trabajo del curso.
+  factory FechaCalendario.deTrabajo(Map<String, dynamic> m, {String? grupoDelCurso}) {
+    final vence = DateTime.parse(m['vence_at'] as String).toLocal();
+    return FechaCalendario(
+      id: m['id'] as String,
+      tipo: TipoFecha.entrega,
+      titulo: m['titulo'] as String,
+      dia: soloDia(vence),
+      hora: '${vence.hour.toString().padLeft(2, '0')}:${vence.minute.toString().padLeft(2, '0')}',
+      groupId: grupoDelCurso ?? '',
+      grupo: (m['curso'] as Map<String, dynamic>?)?['nombre'] as String? ?? 'Curso',
+      delCurso: true,
+      ruta: grupoDelCurso == null
+          ? '/cursos/${m['curso_id']}/trabajos/${m['id']}'
+          : '/grupos/$grupoDelCurso/entregas',
+    );
+  }
 }
 
 DateTime soloDia(DateTime d) => DateTime(d.year, d.month, d.day);

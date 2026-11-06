@@ -32,3 +32,18 @@ final mencionesProvider = StreamProvider<Comentario>((ref) {
   if (miId == null) return const Stream.empty();
   return ref.watch(comentariosRepositoryProvider).menciones(miId);
 });
+
+/// El fragmento del documento que está marcado, para comentarlo citándolo.
+class CitaController extends Notifier<String?> {
+  CitaController(this.fileId);
+  final String fileId;
+
+  @override
+  String? build() => null;
+
+  void poner(String? cita) => state = cita;
+}
+
+/// Por archivo. La pantalla del documento la mantiene viva (en el celular se
+/// marca el texto y después se abre la hoja de comentarios); al salir se descarta.
+final citaProvider = NotifierProvider.autoDispose.family<CitaController, String?, String>(CitaController.new);

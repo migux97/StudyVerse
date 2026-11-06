@@ -16,11 +16,12 @@ class SupabaseComentariosRepository implements ComentariosRepository {
       });
 
   @override
-  Future<void> comentar({required String fileId, required String groupId, required String texto}) =>
+  Future<void> comentar({required String fileId, required String groupId, required String texto, String? cita}) =>
       _guard(() => _client.from('comentarios').insert({
             'file_id': fileId,
             'group_id': groupId,
             'texto': texto.trim(),
+            'cita': ?cita,
             'autor': _client.auth.currentUser!.id,
           }));
 
