@@ -18,6 +18,7 @@ App para que estudiantes universitarios trabajen en grupo en sus TPs, tan simple
 - **Alumnos y planilla de notas.** Lo que aportó cada alumno (tareas, versiones y comentarios) y una planilla para Excel con la nota de cada trabajo.
 - **Material y fechas del curso.** El docente sube consignas, plantillas o apuntes una vez y los ven todos los grupos (en *Material*, solo lectura). Las fechas que carga (parciales, clases) y los vencimientos de los trabajos aparecen en el calendario de cada alumno.
 - **Varios docentes por curso.** Quien crea el curso suma ayudantes por su @usuario (cuentas de docente): ven los grupos, corrigen y mandan avisos, pero no cambian el curso.
+- **Cuestionarios y evaluaciones virtuales.** El docente arma cuestionarios con preguntas de opción única, varias correctas, respuesta corta y desarrollo. Elige cuándo abre y cierra, el tiempo para rendir, los intentos y cuándo ven la nota. Las de opción y respuesta corta se corrigen solas (sin importar mayúsculas, tildes ni "2,5" contra "2.50"); las de desarrollo las corrige el docente con puntaje y comentario. Si el alumno sale de la pantalla mientras rinde (otra pestaña, otra app, la pantalla de inicio, o lo abre en otro dispositivo), queda registrado con la hora y el tiempo afuera, y el docente lo ve. Opcionalmente se entrega solo al pasar un máximo de salidas. Los resultados se bajan en una planilla.
 - **Comentarios sobre el texto.** En un documento, marcar un fragmento y comentar deja la cita arriba del comentario.
 - **Avisos y devoluciones del docente.** Desde el curso, el docente manda avisos a todo el curso o a un grupo (aparecen arriba en el grupo y llegan en vivo), y en cada tarea deja una *devolución* que ve todo el grupo; a quien tiene o entregó la tarea le llega un aviso. Hasta 20 avisos y 60 devoluciones por hora.
 - **Aprobación de tareas (opcional).** El admin activa "Las tareas las aprueba un admin" en Tareas. Desde ahí, quien hace una tarea la *entrega* (con una nota) y un admin la *aprueba* o *pide cambios*; solo un admin puede dejar una tarea como hecha. A quien entregó le llega un aviso en vivo.
@@ -217,6 +218,13 @@ El mismo nombre (sin importar mayúsculas) en la misma carpeta crea una versión
 - **Fechas** (`fechas_curso`): las cargan los docentes y las ven los alumnos del curso en el calendario.
 - **Topes:** 20 trabajos, 30 avisos de material y 50 fechas por día y por curso, contados en `envios_curso` (borrar no los devuelve).
 - **Tablero y aportes:** `grupos_del_curso` y `aportes_del_curso`; la planilla se arma en la app (`cursos/domain/exportar.dart`, separada con `;` para Excel en español).
+
+### Cuestionarios
+
+- Tablas `cuestionarios`, `preguntas`, `intentos`, `respuestas` e `intento_eventos`. El alumno no lee ninguna directo salvo `cuestionarios` (publicados de su curso) y `preguntas` sin la columna `correctas` (recién después de empezar). Todo lo demás pasa por funciones: `empezar_intento`, `abrir_intento`, `responder`, `avisar_salida`, `entregar_intento`, `mis_intentos`, `detalle_intento`; el docente usa `guardar_cuestionario`, `guardar_preguntas`, `preguntas_con_clave`, `publicar_cuestionario`, `resultados_del_cuestionario` y `corregir_respuesta`.
+- La nota se ve al entregar o al cerrar (según el cuestionario). Las respuestas correctas, recién cuando cerró o cuando el alumno ya no tiene intentos.
+- Un job de `pg_cron` cierra cada minuto los intentos sin tiempo (`cerrar_intentos_vencidos`).
+- Salidas: la app (`DetectorSalidas`) escucha el ciclo de vida. En el celular cuenta pasar a segundo plano; en la web, cambiar de pestaña o minimizar, y que la ventana pierda el foco más de 2 segundos. Cada pantalla de rendir tiene una sesión: abrirlo en otra pestaña o dispositivo cuenta como salida y la anterior ya no puede responder. Es un registro para el docente, no un bloqueo: no detecta un segundo dispositivo ni a alguien al lado.
 
 ### Chat
 
