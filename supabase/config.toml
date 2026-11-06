@@ -428,6 +428,10 @@ verify_jwt = false
 [functions.storage-cleanup]
 verify_jwt = false
 
+# La llama la base (pg_net y pg_cron) con el secreto interno, no un usuario.
+[functions.enviar-push]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
