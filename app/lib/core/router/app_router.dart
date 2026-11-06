@@ -28,6 +28,7 @@ import '../../features/versiones/presentation/historial_screen.dart';
 import '../../features/visor/presentation/visor_screen.dart';
 import '../../features/cursos/presentation/curso_screen.dart';
 import '../../features/notificaciones/presentation/notificaciones_screen.dart';
+import '../../features/chat/presentation/chat_screen.dart';
 
 class Routes {
   static const login = '/login';
@@ -45,6 +46,7 @@ class Routes {
   static String miembros(String id) => '/grupos/$id/miembros';
   static String carpeta(String grupoId, String carpetaId) => '/grupos/$grupoId/carpetas/$carpetaId';
   static String tareas(String id) => '/grupos/$id/tareas';
+  static String chat(String id) => '/grupos/$id/chat';
   static String actividad(String id) => '/grupos/$id/actividad';
   static String aportes(String id) => '/grupos/$id/aportes';
   static String telegram(String id) => '/grupos/$id/telegram';
@@ -155,6 +157,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, s) => TelegramScreen(groupId: s.pathParameters['id']!),
           ),
           // Secciones del grupo: sin animación al cambiar de pestaña.
+          GoRoute(
+            path: 'chat',
+            pageBuilder: (_, s) => NoTransitionPage(child: ChatScreen(groupId: s.pathParameters['id']!)),
+          ),
           GoRoute(
             path: 'tareas',
             pageBuilder: (_, s) => NoTransitionPage(child: TasksScreen(groupId: s.pathParameters['id']!)),

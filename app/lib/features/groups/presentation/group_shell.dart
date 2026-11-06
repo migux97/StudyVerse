@@ -9,9 +9,11 @@ import 'group_dialogs.dart';
 import 'groups_providers.dart';
 import 'invite_card.dart';
 import '../../cursos/presentation/curso_acciones.dart';
+import '../../chat/presentation/chat_providers.dart';
 
 enum SeccionGrupo {
   archivos('Archivos', Icons.folder_outlined, Icons.folder),
+  chat('Chat', Icons.forum_outlined, Icons.forum),
   tareas('Tareas', Icons.task_alt_outlined, Icons.task_alt),
   actividad('Actividad', Icons.history_outlined, Icons.history),
   aportes('Aportes', Icons.insights_outlined, Icons.insights);
@@ -23,6 +25,7 @@ enum SeccionGrupo {
 
   String ruta(String groupId) => switch (this) {
         archivos => Routes.grupo(groupId),
+        chat => Routes.chat(groupId),
         tareas => Routes.tareas(groupId),
         actividad => Routes.actividad(groupId),
         aportes => Routes.aportes(groupId),
@@ -81,8 +84,12 @@ class GroupShell extends StatelessWidget {
 
   static const _anchoRail = 900.0;
 
+  /// El docente no ve el chat (es de los alumnos).
+  List<SeccionGrupo> get _secciones =>
+      [for (final s in SeccionGrupo.values) if (s != SeccionGrupo.chat || !grupo.soloLectura) s];
+
   void _ir(BuildContext context, int i) {
-    final destino = SeccionGrupo.values[i];
+    final destino = _secciones[i];
     if (destino != seccion) context.go(destino.ruta(grupo.id));
   }
 
@@ -125,23 +132,27 @@ class GroupShell extends StatelessWidget {
       bottomNavigationBar: ancho
           ? null
           : NavigationBar(
-              selectedIndex: seccion.index,
+              selectedIndex: _secciones.indexOf(seccion).clamp(0, _secciones.length - 1),
               onDestinationSelected: (i) => _ir(context, i),
               destinations: [
-                for (final s in SeccionGrupo.values)
-                  NavigationDestination(icon: Icon(s.icono), selectedIcon: Icon(s.iconoActivo), label: s.etiqueta),
+                for (final s in _secciones)
+                  NavigationDestination(
+                    icon: _IconoSeccion(seccion: s, groupId: grupo.id),
+                    selectedIcon: Icon(s.iconoActivo),
+                    label: s.etiqueta,
+                  ),
               ],
             ),
       body: ancho
           ? Row(children: [
               NavigationRail(
-                selectedIndex: seccion.index,
+                selectedIndex: _secciones.indexOf(seccion).clamp(0, _secciones.length - 1),
                 onDestinationSelected: (i) => _ir(context, i),
                 labelType: NavigationRailLabelType.all,
                 destinations: [
-                  for (final s in SeccionGrupo.values)
+                  for (final s in _secciones)
                     NavigationRailDestination(
-                      icon: Icon(s.icono),
+                      icon: _IconoSeccion(seccion: s, groupId: grupo.id),
                       selectedIcon: Icon(s.iconoActivo),
                       label: Text(s.etiqueta),
                     ),
@@ -297,6 +308,24 @@ class BannerSoloLectura extends StatelessWidget {
           ),
         ]),
       ),
+    );
+  }
+}
+
+/// Ícono de una sección; el del chat lleva cuántos mensajes hay sin leer.
+class _IconoSeccion extends ConsumerWidget {
+  const _IconoSeccion({required this.seccion, required this.groupId});
+  final SeccionGrupo seccion;
+  final String groupId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (seccion != SeccionGrupo.chat) return Icon(seccion.icono);
+    final n = ref.watch(sinLeerDelGrupoProvider(groupId));
+    return Badge(
+      isLabelVisible: n > 0,
+      label: Text(n > 99 ? '99+' : '$n'),
+      child: Icon(seccion.icono),
     );
   }
 }

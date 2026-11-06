@@ -11,6 +11,7 @@ App para que estudiantes universitarios trabajen en grupo en sus TPs, tan simple
 - **Visor de archivos.** *Abrir* muestra el archivo dentro de la app: PDF, imágenes (con zoom), Word, Excel y CSV (en solapas, como planilla), PowerPoint (el texto de cada diapositiva), video, audio, texto y código. Los archivos de texto y código se pueden editar ahí mismo; cada cambio guardado es una versión nueva.
 - **Inicio como Drive.** Arriba de *Mis grupos*: *Buscar en StudyVerse* (por nombre, en todos tus grupos, sin importar tildes), lo que *Se viene en la semana*, tus *Destacados* (estrella en el menú de cada archivo) y tus *Recientes* (lo último que abriste).
 - **Docentes y cursos.** Al registrarse se elige *Soy estudiante* o *Soy docente* (se puede cambiar en el perfil). El docente crea cursos ("Física II · Comisión 3") con un código; el admin de cada grupo lo suma en *Más opciones → Sumar a un curso*. El docente ve, en solo lectura, los grupos de su curso: archivos y versiones, tareas, actividad y aportes, y puede comentar. Nunca recibe el código de invitación del grupo ni puede entrar como integrante.
+- **Chat del grupo.** Una pestaña *Chat* para coordinar el TP sin salir de la app: mensajes en vivo agrupados por día, responder citando, mencionar con `@usuario`, adjuntar un archivo del grupo (se abre con un toque), editar los propios y eliminar (los propios, o cualquiera si sos admin; queda "Mensaje eliminado"). La pestaña muestra cuántos mensajes sin leer hay y, al entrar, una marca de *Mensajes nuevos*. Solo avisa por push a quien mencionan o le responden. Es solo de los integrantes: el docente no lo ve.
 - **Notificaciones.** La campanita junta menciones, tareas asignadas, avisos y devoluciones del docente, revisiones de entregas y pedidos de archivo. Con Firebase configurado también llegan como push al celular y al navegador, aunque la app esté cerrada; tocarlas abre la pantalla.
 - **Avisos y devoluciones del docente.** Desde el curso, el docente manda avisos a todo el curso o a un grupo (aparecen arriba en el grupo y llegan en vivo), y en cada tarea deja una *devolución* que ve todo el grupo; a quien tiene o entregó la tarea le llega un aviso. Hasta 20 avisos y 60 devoluciones por hora.
 - **Aprobación de tareas (opcional).** El admin activa "Las tareas las aprueba un admin" en Tareas. Desde ahí, quien hace una tarea la *entrega* (con una nota) y un admin la *aprueba* o *pide cambios*; solo un admin puede dejar una tarea como hecha. A quien entregó le llega un aviso en vivo.
@@ -201,6 +202,13 @@ El mismo nombre (sin importar mayúsculas) en la misma carpeta crea una versión
 - **Búsqueda:** `buscar_archivos` corre con los permisos de quien busca y compara sin tildes (`unaccent`, con índice).
 - **Calendario:** tareas con `due_date` + tabla `eventos` (parcial, entrega, clase, otro). Los edita o borra quien los creó o un admin.
 - **Comentarios:** tabla `comentarios`; un trigger calcula las menciones (solo integrantes del grupo) y avisa por `usuario:{id}:menciones`. El hilo se actualiza por `grupo:{id}:comentarios`.
+
+### Chat
+
+- **Mensajes** (`mensajes`): solo los integrantes leen y escriben (el docente no tiene política ni canal). El cliente elige texto, archivo y a quién responde (grants por columna); un trigger recorta el texto, calcula las menciones (solo integrantes) y pone un tope de 30 mensajes por minuto. Se edita solo el texto propio; `borrar_mensaje` (autor o admin) vacía el mensaje, deja la marca `borrado_at` y saca su notificación de la campanita. Si un adjunto se elimina para siempre, el mensaje que lo tenía solo queda como eliminado.
+- **Sin leer:** `chat_leido` guarda hasta cuándo leyó cada uno; se escribe solo con `marcar_chat_leido`, y `chat_sin_leer` cuenta por grupo los mensajes ajenos posteriores (o posteriores a cuando entraste al grupo).
+- **En vivo:** el aviso va por `grupo:{id}:chat` con solo el id del mensaje; la app lo lee con su RLS. Se cargan de a 50, para atrás al llegar arriba.
+- **Notificaciones:** tipo `chat`, solo a los mencionados y al autor del mensaje respondido, en una sola sentencia.
 
 ### Tareas, actividad y aportes
 

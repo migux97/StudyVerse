@@ -16,6 +16,7 @@ abstract final class Canales {
   static String documentos(String groupId) => 'grupo:$groupId:documentos';
   static String comentarios(String groupId) => 'grupo:$groupId:comentarios';
   static String avisos(String groupId) => 'grupo:$groupId:avisos';
+  static String chat(String groupId) => 'grupo:$groupId:chat';
   static String misGrupos(String userId) => 'usuario:$userId:grupos';
   static String pedidos(String userId) => 'usuario:$userId:pedidos';
   static String menciones(String userId) => 'usuario:$userId:menciones';

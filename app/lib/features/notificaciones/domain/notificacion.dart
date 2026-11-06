@@ -12,13 +12,16 @@ enum TipoNotificacion {
   devolucion(Icons.rate_review_outlined),
   revision(Icons.task_alt),
   pedido(Icons.front_hand_outlined),
-  tareaAsignada(Icons.assignment_ind_outlined);
+  tareaAsignada(Icons.assignment_ind_outlined),
+  chat(Icons.forum_outlined);
 
   const TipoNotificacion(this.icono);
   final IconData icono;
 
-  static TipoNotificacion desde(String v) =>
-      v == 'tarea_asignada' ? tareaAsignada : TipoNotificacion.values.byName(v);
+  /// Un tipo que esta versión no conoce (agregado después) se muestra como aviso.
+  static TipoNotificacion desde(String v) => v == 'tarea_asignada'
+      ? tareaAsignada
+      : TipoNotificacion.values.where((t) => t.name == v).firstOrNull ?? aviso;
 }
 
 /// Una notificación del centro de notificaciones (la campanita).
