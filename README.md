@@ -11,6 +11,7 @@ App para que estudiantes universitarios trabajen en grupo en sus TPs, tan simple
 - **Visor de archivos.** *Abrir* muestra el archivo dentro de la app: PDF, imágenes (con zoom), Word, Excel y CSV (en solapas, como planilla), PowerPoint (el texto de cada diapositiva), video, audio, texto y código. Los archivos de texto y código se pueden editar ahí mismo; cada cambio guardado es una versión nueva.
 - **Inicio como Drive.** Arriba de *Mis grupos*: *Buscar en StudyVerse* (por nombre, en todos tus grupos, sin importar tildes), lo que *Se viene en la semana*, tus *Destacados* (estrella en el menú de cada archivo) y tus *Recientes* (lo último que abriste).
 - **Docentes y cursos.** Al registrarse se elige *Soy estudiante* o *Soy docente* (se puede cambiar en el perfil). El docente crea cursos ("Física II · Comisión 3") con un código; el admin de cada grupo lo suma en *Más opciones → Sumar a un curso*. El docente ve, en solo lectura, los grupos de su curso: archivos y versiones, tareas, actividad y aportes, y puede comentar. Nunca recibe el código de invitación del grupo ni puede entrar como integrante.
+- **Notificaciones.** La campanita junta menciones, tareas asignadas, avisos y devoluciones del docente, revisiones de entregas y pedidos de archivo. Con Firebase configurado también llegan como push al celular y al navegador, aunque la app esté cerrada; tocarlas abre la pantalla.
 - **Avisos y devoluciones del docente.** Desde el curso, el docente manda avisos a todo el curso o a un grupo (aparecen arriba en el grupo y llegan en vivo), y en cada tarea deja una *devolución* que ve todo el grupo; a quien tiene o entregó la tarea le llega un aviso. Hasta 20 avisos y 60 devoluciones por hora.
 - **Aprobación de tareas (opcional).** El admin activa "Las tareas las aprueba un admin" en Tareas. Desde ahí, quien hace una tarea la *entrega* (con una nota) y un admin la *aprueba* o *pide cambios*; solo un admin puede dejar una tarea como hecha. A quien entregó le llega un aviso en vivo.
 - **Varias materias por grupo.** Un mismo grupo de estudio puede cursar varias materias juntos: cada materia es una carpeta principal con color (como las carpetas de colores de Drive), con sus TPs y archivos adentro. Se cargan al crear el grupo o con *Nuevo → Nueva materia*, y una carpeta de la raíz se puede *usar como materia*. Las tareas y los eventos del calendario se asocian a una materia.
@@ -103,6 +104,20 @@ npx supabase functions serve --env-file supabase/functions/.env
 ```
 
 El script crea `supabase/functions/.env` con secretos aleatorios y los registra en Vault, para que la base pueda llamar a las funciones. Para probar sin Telegram, pasá `-ApiBase` con la URL de un Telegram simulado.
+
+### Notificaciones push (opcional)
+
+Sin esto, las notificaciones quedan en la campanita de la app.
+
+1. En [Firebase](https://console.firebase.google.com) creá un proyecto y agregale una app **Web** y una app **Android** (paquete `io.studyverse.app`).
+2. En *Configuración del proyecto → Cloud Messaging → Certificados push web*, generá un par de claves (VAPID).
+3. Completá en `app/.env` los `FIREBASE_*` (ver `app/.env.example`) y corré `./app/tool/configurar-firebase-web.ps1`, que arma la configuración del service worker.
+4. En *Configuración del proyecto → Cuentas de servicio*, generá una clave privada (un JSON) y cargala en las funciones: `./supabase/scripts/configurar-funciones-local.ps1 -FcmCuentaServicio rutalrchivo.json -WebUrl http://localhost:3000`. Nunca lo subas al repo.
+5. Compilá de nuevo la app y serví las funciones (`npx supabase functions serve --env-file supabase/functions/.env`).
+
+En la web, cada persona activa los push desde la campanita (el navegador pide permiso). En Android se pide la primera vez que entra.
+
+Al publicar la web, configurá el servidor para que no guarde en caché `assets/`, `main.dart.js` ni los service workers (`Cache-Control: no-cache`): Flutter no les cambia el nombre entre versiones y, si no, después de actualizar pueden faltar íconos o quedar código viejo.
 
 ### Login con Google
 

@@ -16,6 +16,7 @@ import 'auth_providers.dart';
 import 'campos.dart';
 import 'google_button.dart';
 import 'user_avatar.dart';
+import '../../../core/push/push.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -136,7 +137,15 @@ class ProfileScreen extends ConsumerWidget {
                         child: OutlinedButton.icon(
                           icon: const Icon(Icons.logout),
                           label: const Text('Cerrar sesión'),
-                          onPressed: () => ref.read(authRepositoryProvider).signOut(),
+                          onPressed: () async {
+                            final push = ref.read(pushProvider);
+                            final auth = ref.read(authRepositoryProvider);
+                            try {
+                              await push.alCerrarSesion();
+                            } finally {
+                              await auth.signOut();
+                            }
+                          },
                         ),
                       ),
                     ],

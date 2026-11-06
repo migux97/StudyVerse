@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
 /// Configuración leída de `--dart-define-from-file=.env`.
@@ -15,6 +16,30 @@ class Env {
 
   /// Deep link al que vuelve el login con Google en Android.
   static const authRedirectMobile = 'io.studyverse.app://login-callback';
+
+  // Firebase (notificaciones push). Opcional: sin esto, solo hay campanita.
+  static const _firebaseApiKey = String.fromEnvironment('FIREBASE_API_KEY');
+  static const _firebaseProjectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
+  static const _firebaseSenderId = String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID');
+  static const _firebaseAppIdWeb = String.fromEnvironment('FIREBASE_APP_ID_WEB');
+  static const _firebaseAppIdAndroid = String.fromEnvironment('FIREBASE_APP_ID_ANDROID');
+  static const firebaseVapidKey = String.fromEnvironment('FIREBASE_VAPID_KEY');
+
+  static String get _firebaseAppId => kIsWeb ? _firebaseAppIdWeb : _firebaseAppIdAndroid;
+
+  static bool get firebaseConfigurado =>
+      _firebaseApiKey.isNotEmpty &&
+      _firebaseProjectId.isNotEmpty &&
+      _firebaseSenderId.isNotEmpty &&
+      _firebaseAppId.isNotEmpty &&
+      (!kIsWeb || firebaseVapidKey.isNotEmpty);
+
+  static FirebaseOptions get firebaseOptions => FirebaseOptions(
+        apiKey: _firebaseApiKey,
+        appId: _firebaseAppId,
+        messagingSenderId: _firebaseSenderId,
+        projectId: _firebaseProjectId,
+      );
 
   static bool get isConfigured =>
       supabaseUrl.isNotEmpty && supabasePublishableKey.isNotEmpty;

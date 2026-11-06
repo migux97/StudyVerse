@@ -17,3 +17,6 @@ supabase/.branches/
 *.iml
 .DS_Store
 Thumbs.db
+
+# Configuración de Firebase para el service worker (se genera desde app/.env).
+app/web/firebase-config.js

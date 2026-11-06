@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' show FlutterQuillLocalizations;
@@ -18,13 +20,60 @@ import 'features/tasks/presentation/tasks_providers.dart';
 import 'features/avisos/domain/aviso.dart';
 import 'features/avisos/presentation/avisos_providers.dart';
 import 'features/groups/presentation/groups_providers.dart';
+import 'core/push/push.dart';
+import 'features/auth/presentation/auth_providers.dart';
 
 /// Para mostrar avisos que no dependen de la pantalla actual.
-class StudyVerseApp extends ConsumerWidget {
+class StudyVerseApp extends ConsumerStatefulWidget {
   const StudyVerseApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StudyVerseApp> createState() => _StudyVerseAppState();
+}
+
+class _StudyVerseAppState extends ConsumerState<StudyVerseApp> {
+  StreamSubscription<String>? _tocadas;
+  String? _rutaPendiente;
+  static const _pushPedido = 'push_permiso_pedido';
+
+  @override
+  void initState() {
+    super.initState();
+    // Tocar un push (con la app cerrada o de fondo) abre esa pantalla.
+    // Si todavía no hay sesión, se abre después de entrar.
+    _tocadas = ref.read(pushProvider).rutasTocadas.listen((ruta) {
+      if (ref.read(authStateProvider).value == null) {
+        _rutaPendiente = ruta;
+      } else {
+        ref.read(routerProvider).push(ruta);
+      }
+    });
+    // Al entrar: si este dispositivo ya dio permiso, queda registrado. En
+    // Android se pide la primera vez; en la web, desde la campanita (el
+    // navegador exige un toque).
+    ref.listenManual(authStateProvider.select((s) => s.value?.id), (_, id) {
+      if (id == null) return;
+      if (_rutaPendiente case final ruta?) {
+        _rutaPendiente = null;
+        WidgetsBinding.instance.addPostFrameCallback((_) => ref.read(routerProvider).push(ruta));
+      }
+      final prefs = ref.read(sharedPreferencesProvider);
+      ref.read(pushProvider).alEntrar(
+        yaSePidio: prefs?.getBool(_pushPedido) ?? false,
+        marcarPedido: () async => prefs?.setBool(_pushPedido, true),
+      ).catchError((_) {});
+    }, fireImmediately: true);
+  }
+
+  @override
+  void dispose() {
+    _tocadas?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+
     // "Ana necesita editar Informe.docx": llega aunque estés en otra pantalla.
     ref.listen(pedidosEntrantesProvider, (_, pedido) {
       if (pedido case AsyncData(:final value)) _avisarPedido(ref, value);

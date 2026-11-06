@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'core/config/env.dart';
+import 'core/push/push.dart';
 import 'core/errors.dart';
 import 'core/theme/theme_mode.dart';
 
@@ -24,6 +25,9 @@ Future<void> main() async {
     url: Env.resolvedSupabaseUrl,
     publishableKey: Env.supabasePublishableKey,
   );
+
+  // Notificaciones push (si Firebase está configurado).
+  await Push.iniciar();
 
   SharedPreferences? prefs;
   try {

@@ -19,6 +19,7 @@ abstract final class Canales {
   static String misGrupos(String userId) => 'usuario:$userId:grupos';
   static String pedidos(String userId) => 'usuario:$userId:pedidos';
   static String menciones(String userId) => 'usuario:$userId:menciones';
+  static String notificaciones(String userId) => 'usuario:$userId:notificaciones';
 
   /// Revisiones de mis entregas (aprobada o con cambios pedidos).
   static String tareasDe(String userId) => 'usuario:$userId:tareas';

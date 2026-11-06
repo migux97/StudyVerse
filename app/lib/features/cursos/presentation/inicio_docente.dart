@@ -13,6 +13,7 @@ import '../../groups/presentation/groups_providers.dart';
 import '../domain/curso.dart';
 import 'cursos_providers.dart';
 import '../../groups/presentation/group_shell.dart' show Aviso;
+import '../../notificaciones/presentation/notificaciones_screen.dart';
 
 /// Inicio de una cuenta de docente: sus cursos y, si también es integrante de
 /// algún grupo, esos grupos.
@@ -29,6 +30,7 @@ class InicioDocente extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Mis cursos'),
         actions: [
+          const BotonNotificaciones(),
           if (perfil != null)
             Padding(
               padding: const EdgeInsets.only(right: 12),

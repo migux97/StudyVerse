@@ -10,6 +10,7 @@ import 'group_dialogs.dart';
 import 'groups_providers.dart';
 import '../../inicio/presentation/inicio_secciones.dart';
 import '../../cursos/presentation/inicio_docente.dart';
+import '../../notificaciones/presentation/notificaciones_screen.dart';
 
 /// Pantalla principal: los grupos del usuario, como carpetas.
 class GroupsScreen extends ConsumerWidget {
@@ -26,6 +27,7 @@ class GroupsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Mis grupos'),
         actions: [
+          const BotonNotificaciones(),
           IconButton(
             tooltip: 'Calendario',
             icon: const Icon(Icons.calendar_month_outlined),
