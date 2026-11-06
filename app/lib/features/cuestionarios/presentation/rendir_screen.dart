@@ -13,6 +13,7 @@ import '../../groups/presentation/group_shell.dart' show Aviso;
 import '../domain/cuestionario.dart';
 import 'cuestionarios_providers.dart';
 import 'detector_salidas.dart';
+import 'herramientas_escritura.dart';
 
 /// Rendir un cuestionario: las preguntas, el reloj y el aviso de salidas. Cada
 /// respuesta se guarda al momento (las de texto, al dejar de escribir).
@@ -48,10 +49,16 @@ class _RendirScreenState extends ConsumerState<RendirScreen> {
 
   final Map<String, Object> _valores = {};
   final Map<String, TextEditingController> _textos = {};
+  final Map<String, UndoHistoryController> _historial = {};
+  final Map<String, FocusNode> _focos = {};
   final Map<String, Timer> _demoras = {};
   final Map<String, Future<void>> _guardados = {};
   final Set<String> _sinGuardar = {};
   int _guardando = 0;
+
+  /// La pregunta que se ve (de a una; se puede ir y volver).
+  int _actual = 0;
+  final _scroll = ScrollController();
 
   int _salidas = 0;
   bool _otraSesion = false;
@@ -98,6 +105,13 @@ class _RendirScreenState extends ConsumerState<RendirScreen> {
     for (final c in _textos.values) {
       c.dispose();
     }
+    _scroll.dispose();
+    for (final c in _historial.values) {
+      c.dispose();
+    }
+    for (final f in _focos.values) {
+      f.dispose();
+    }
     super.dispose();
   }
 
@@ -114,6 +128,8 @@ class _RendirScreenState extends ConsumerState<RendirScreen> {
         if (p.tipo.conOpciones) continue;
         final texto = d.respuestas[p.id] as String? ?? '';
         final c = _textos.putIfAbsent(p.id!, TextEditingController.new);
+        _historial.putIfAbsent(p.id!, UndoHistoryController.new);
+        _focos.putIfAbsent(p.id!, FocusNode.new);
         if (c.text != texto) c.text = texto;
       }
       setState(() {
@@ -122,6 +138,7 @@ class _RendirScreenState extends ConsumerState<RendirScreen> {
         _otraSesion = false;
         _sinGuardar.clear();
         _preguntas = d.cuestionario.mezclar ? mezclarCon(d.preguntas, d.intento.id) : d.preguntas;
+        _actual = _actual.clamp(0, max(0, _preguntas.length - 1));
         _ordenOpciones = {
           for (final p in d.preguntas)
             p.id!: d.cuestionario.mezclar
@@ -399,6 +416,7 @@ class _RendirScreenState extends ConsumerState<RendirScreen> {
     final scheme = theme.colorScheme;
     final c = d.cuestionario;
     return ListView(
+      controller: _scroll,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
       children: [
         Center(
@@ -433,22 +451,86 @@ class _RendirScreenState extends ConsumerState<RendirScreen> {
                   child: Text(desc, style: theme.textTheme.bodyMedium),
                 ),
               ],
-              const SizedBox(height: 8),
-              for (final (n, p) in _preguntas.indexed) _tarjetaPregunta(context, n + 1, p),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerRight,
-                child: FilledButton.icon(
-                  icon: const Icon(Icons.send_outlined),
-                  label: const Text('Entregar'),
-                  onPressed: _entregando ? null : () => _entregar(),
+              const SizedBox(height: 12),
+              _navegador(context),
+              if (_preguntas.isNotEmpty)
+                KeyedSubtree(
+                  key: ValueKey(_preguntas[_actual].id),
+                  child: _tarjetaPregunta(context, _actual + 1, _preguntas[_actual]),
                 ),
-              ),
+              const SizedBox(height: 16),
+              Row(children: [
+                if (_actual > 0)
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Anterior'),
+                    onPressed: () => _irA(_actual - 1),
+                  ),
+                const Spacer(),
+                if (_actual < _preguntas.length - 1)
+                  FilledButton.icon(
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text('Siguiente'),
+                    onPressed: () => _irA(_actual + 1),
+                  )
+                else
+                  FilledButton.icon(
+                    icon: const Icon(Icons.send_outlined),
+                    label: const Text('Entregar'),
+                    onPressed: _entregando ? null : () => _entregar(),
+                  ),
+              ]),
             ]),
           ),
         ),
       ],
     );
+  }
+
+  static String _contador(String texto, int largo, int? maximo) {
+    final n = contarPalabras(texto);
+    return '${n == 1 ? '1 palabra' : '$n palabras'} · $largo/${maximo ?? '∞'}';
+  }
+
+  void _irA(int i) {
+    if (i < 0 || i >= _preguntas.length || i == _actual) return;
+    _guardarDemorados();
+    FocusScope.of(context).unfocus();
+    setState(() => _actual = i);
+    if (_scroll.hasClients) _scroll.jumpTo(0);
+  }
+
+  /// Los números de las preguntas: las respondidas, rellenas; la actual, marcada.
+  /// Tocando uno se va a esa pregunta (también a las anteriores).
+  Widget _navegador(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Wrap(spacing: 6, runSpacing: 6, children: [
+      for (final (i, p) in _preguntas.indexed)
+        Tooltip(
+          message: 'Pregunta ${i + 1}${_respondida(p) ? ' · respondida' : ' · sin responder'}'
+              '${i == _actual ? ' · la que estás viendo' : ''}',
+          child: SizedBox.square(
+            dimension: 48,
+            child: _respondida(p)
+                ? FilledButton.tonal(
+                    style: FilledButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      side: i == _actual ? BorderSide(color: scheme.primary, width: 2) : null,
+                    ),
+                    onPressed: () => _irA(i),
+                    child: Text('${i + 1}'),
+                  )
+                : OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      side: i == _actual ? BorderSide(color: scheme.primary, width: 2) : null,
+                    ),
+                    onPressed: () => _irA(i),
+                    child: Text('${i + 1}'),
+                  ),
+          ),
+        ),
+    ]);
   }
 
   Widget _tarjetaPregunta(BuildContext context, int n, Pregunta p) {
@@ -484,6 +566,14 @@ class _RendirScreenState extends ConsumerState<RendirScreen> {
                       contentPadding: EdgeInsets.zero,
                       title: Text(p.opciones[i]),
                     ),
+                  if (elegidas.isNotEmpty && !bloqueado)
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton(
+                        onPressed: () => _cambiar(p, null),
+                        child: const Text('Quitar respuesta'),
+                      ),
+                    ),
                 ]),
               ),
             TipoPregunta.varias => Column(children: [
@@ -501,26 +591,55 @@ class _RendirScreenState extends ConsumerState<RendirScreen> {
                     },
                   ),
               ]),
-            TipoPregunta.corta => TextField(
-                controller: _textos[id],
-                enabled: !bloqueado,
-                maxLength: 200,
-                decoration: const InputDecoration(labelText: 'Tu respuesta', hintText: 'Ej.: 9,8'),
-                onChanged: (t) => _cambiar(p, t, demorar: true),
-              ),
-            TipoPregunta.desarrollo => TextField(
-                controller: _textos[id],
-                enabled: !bloqueado,
-                minLines: 4,
-                maxLines: 14,
-                maxLength: 10000,
-                decoration: const InputDecoration(
-                  labelText: 'Tu respuesta',
-                  hintText: 'Ej.: El período no depende de la masa porque…',
-                  alignLabelWithHint: true,
+            TipoPregunta.corta => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                HerramientasEscritura(
+                  controller: _textos[id]!,
+                  deshacer: _historial[id]!,
+                  focusNode: _focos[id],
+                  maxLength: 200,
+                  conVinetas: false,
+                  habilitado: !bloqueado,
+                  alCambiar: (t) => _cambiar(p, t, demorar: true),
                 ),
-                onChanged: (t) => _cambiar(p, t, demorar: true),
-              ),
+                TextField(
+                  controller: _textos[id],
+                  undoController: _historial[id],
+                  focusNode: _focos[id],
+                  enabled: !bloqueado,
+                  maxLength: 200,
+                  decoration: const InputDecoration(labelText: 'Tu respuesta', hintText: 'Ej.: 9,8 m/s²'),
+                  onChanged: (t) => _cambiar(p, t, demorar: true),
+                ),
+              ]),
+            TipoPregunta.desarrollo => Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                HerramientasEscritura(
+                  controller: _textos[id]!,
+                  deshacer: _historial[id]!,
+                  focusNode: _focos[id],
+                  maxLength: 10000,
+                  habilitado: !bloqueado,
+                  alCambiar: (t) => _cambiar(p, t, demorar: true),
+                ),
+                TextField(
+                  controller: _textos[id],
+                  undoController: _historial[id],
+                  focusNode: _focos[id],
+                  enabled: !bloqueado,
+                  minLines: 6,
+                  maxLines: 20,
+                  maxLength: 10000,
+                  keyboardType: TextInputType.multiline,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    labelText: 'Tu respuesta',
+                    hintText: 'Ej.: El período no depende de la masa porque…',
+                    alignLabelWithHint: true,
+                  ),
+                  buildCounter: (context, {required currentLength, required isFocused, maxLength}) =>
+                      Text(_contador(_textos[id]!.text, currentLength, maxLength)),
+                  onChanged: (t) => _cambiar(p, t, demorar: true),
+                ),
+              ]),
           },
         ]),
       ),
