@@ -10,7 +10,9 @@ String planillaDeNotas({
   required List<Entrega> entregas,
 }) {
   String celda(Object? v) {
-    final s = v?.toString() ?? '';
+    var s = v?.toString() ?? '';
+    // Un texto que empieza con = + - lo toma Excel como fórmula.
+    if (v is String && RegExp(r'^[=+\-\t\r]').hasMatch(s)) s = "'$s";
     return RegExp(r'[;"\n\r]').hasMatch(s) ? '"${s.replaceAll('"', '""')}"' : s;
   }
 

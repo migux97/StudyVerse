@@ -14,11 +14,12 @@ import 'inicio_docente.dart';
 import '../../avisos/domain/aviso.dart';
 import '../../avisos/presentation/avisos_providers.dart';
 import '../../avisos/presentation/avisos_widgets.dart';
+import '../../cuestionarios/presentation/cuestionarios_docente.dart';
 import '../../entregas/presentation/trabajos_docente.dart';
 import 'curso_paneles.dart';
 
 /// Un curso del docente, en pestañas: los grupos (tablero), los trabajos para
-/// entregar y corregir, los alumnos (aportes y planilla de notas), el material
+/// entregar y corregir, los cuestionarios, los alumnos (aportes y planilla de notas), el material
 /// y las fechas.
 class CursoScreen extends ConsumerWidget {
   const CursoScreen({super.key, required this.cursoId});
@@ -39,7 +40,7 @@ class CursoScreen extends ConsumerWidget {
     final c = curso.value?.conTitular(ref.watch(soyTitularProvider(cursoId)).value ?? false);
 
     return DefaultTabController(
-      length: 5,
+      length: 6,
       child: Scaffold(
       appBar: AppBar(
         // Abierto desde un link no hay pantalla anterior: vuelve a Mis cursos.
@@ -51,6 +52,7 @@ class CursoScreen extends ConsumerWidget {
           tabs: [
             Tab(text: 'Grupos'),
             Tab(text: 'Trabajos'),
+            Tab(text: 'Cuestionarios'),
             Tab(text: 'Alumnos'),
             Tab(text: 'Material'),
             Tab(text: 'Fechas'),
@@ -193,6 +195,7 @@ class CursoScreen extends ConsumerWidget {
             ),
           ),
           TrabajosDelCurso(curso: c),
+          CuestionariosDelCurso(curso: c),
           AlumnosDelCurso(curso: c),
           ListaMaterial(cursoId: c.id, esDocente: true),
           FechasDelCurso(cursoId: c.id),

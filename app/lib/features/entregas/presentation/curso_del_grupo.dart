@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
 import '../../groups/domain/group.dart';
+import '../../cuestionarios/domain/cuestionario.dart';
+import '../../cuestionarios/presentation/cuestionarios_providers.dart';
 import '../domain/trabajo.dart';
 import 'entregas_providers.dart';
 
 /// Arriba del grupo (si está en un curso): el próximo trabajo a entregar y los
-/// accesos a los trabajos y al material del docente.
+/// accesos a los trabajos, los cuestionarios y el material del docente.
 class CursoDelGrupo extends ConsumerWidget {
   const CursoDelGrupo({super.key, required this.grupo});
   final Group grupo;
@@ -21,6 +23,9 @@ class CursoDelGrupo extends ConsumerWidget {
     final ahora = DateTime.now();
     final pendientes = trabajos.where((t) => entregas[t.id] == null && !t.vencido(ahora)).toList();
     final aRehacer = entregas.values.where((e) => e.estado == EstadoEntrega.aRehacer).length;
+    final abiertos = (ref.watch(cuestionariosDelGrupoProvider(grupo.id)).value ?? const <Cuestionario>[])
+        .where((c) => c.estado(ahora) == EstadoCuestionario.abierto)
+        .length;
     final theme = Theme.of(context);
     final proximo = pendientes.firstOrNull;
     final texto = proximo != null
@@ -56,6 +61,15 @@ class CursoDelGrupo extends ConsumerWidget {
                   ),
                   label: const Text('Trabajos'),
                   onPressed: () => context.push(Routes.entregas(grupo.id)),
+                ),
+                TextButton.icon(
+                  icon: Badge(
+                    isLabelVisible: abiertos > 0,
+                    label: Text('$abiertos'),
+                    child: const Icon(Icons.quiz_outlined, size: 18),
+                  ),
+                  label: const Text('Cuestionarios'),
+                  onPressed: () => context.push(Routes.cuestionariosGrupo(grupo.id)),
                 ),
                 TextButton.icon(
                   icon: const Icon(Icons.folder_special_outlined, size: 18),

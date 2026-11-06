@@ -5,6 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/cursos/presentation/material_grupo_screen.dart';
+import '../../features/cuestionarios/presentation/cuestionarios_docente.dart';
+import '../../features/cuestionarios/presentation/cuestionarios_grupo_screen.dart';
+import '../../features/cuestionarios/presentation/detalle_intento_screen.dart';
+import '../../features/cuestionarios/presentation/rendir_screen.dart';
 import '../../features/entregas/presentation/entregas_grupo_screen.dart';
 import '../../features/entregas/presentation/trabajos_docente.dart';
 import '../../features/auth/domain/auth_repository.dart';
@@ -66,6 +70,15 @@ class Routes {
   static String trabajo(String cursoId, String trabajoId) => '/cursos/$cursoId/trabajos/$trabajoId';
   static String entregas(String id) => '/grupos/$id/entregas';
   static String material(String id) => '/grupos/$id/material';
+  static String cuestionariosGrupo(String id) => '/grupos/$id/cuestionarios';
+  static String cuestionarioAlumno(String grupoId, String id) => '/grupos/$grupoId/cuestionarios/$id';
+  static String rendir(String grupoId, String id, String intentoId) =>
+      '/grupos/$grupoId/cuestionarios/$id/rendir/$intentoId';
+  static String resultadoIntento(String grupoId, String id, String intentoId) =>
+      '/grupos/$grupoId/cuestionarios/$id/intentos/$intentoId';
+  static String cuestionarioDocente(String cursoId, String id) => '/cursos/$cursoId/cuestionarios/$id';
+  static String intentoDocente(String cursoId, String id, String intentoId) =>
+      '/cursos/$cursoId/cuestionarios/$id/intentos/$intentoId';
   static const notificaciones = '/notificaciones';
 
   static const publicas = {login, registro};
@@ -128,6 +141,21 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, s) =>
                 TrabajoScreen(cursoId: s.pathParameters['id']!, trabajoId: s.pathParameters['trabajoId']!),
           ),
+          GoRoute(
+            path: 'cuestionarios/:cid',
+            builder: (_, s) =>
+                CuestionarioDocenteScreen(cursoId: s.pathParameters['id']!, cuestionarioId: s.pathParameters['cid']!),
+            routes: [
+              GoRoute(
+                path: 'intentos/:iid',
+                builder: (_, s) => DetalleIntentoScreen(
+                  intentoId: s.pathParameters['iid']!,
+                  docente: true,
+                  volver: Routes.cuestionarioDocente(s.pathParameters['id']!, s.pathParameters['cid']!),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
       GoRoute(
@@ -141,6 +169,35 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(path: 'entregas', builder: (_, s) => EntregasGrupoScreen(groupId: s.pathParameters['id']!)),
           GoRoute(path: 'material', builder: (_, s) => MaterialGrupoScreen(groupId: s.pathParameters['id']!)),
+          GoRoute(
+            path: 'cuestionarios',
+            builder: (_, s) => CuestionariosGrupoScreen(groupId: s.pathParameters['id']!),
+            routes: [
+              GoRoute(
+                path: ':cid',
+                builder: (_, s) => CuestionarioAlumnoScreen(
+                    groupId: s.pathParameters['id']!, cuestionarioId: s.pathParameters['cid']!),
+                routes: [
+                  GoRoute(
+                    path: 'rendir/:iid',
+                    builder: (_, s) => RendirScreen(
+                      groupId: s.pathParameters['id']!,
+                      cuestionarioId: s.pathParameters['cid']!,
+                      intentoId: s.pathParameters['iid']!,
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'intentos/:iid',
+                    builder: (_, s) => DetalleIntentoScreen(
+                      intentoId: s.pathParameters['iid']!,
+                      docente: false,
+                      volver: Routes.cuestionarioAlumno(s.pathParameters['id']!, s.pathParameters['cid']!),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
           GoRoute(
             path: 'miembros',
             builder: (_, s) => MembersScreen(groupId: s.pathParameters['id']!),
