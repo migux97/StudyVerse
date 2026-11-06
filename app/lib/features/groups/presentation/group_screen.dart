@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../entregas/presentation/curso_del_grupo.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/widgets/auth_layout.dart';
 import '../../auth/presentation/auth_providers.dart';
@@ -128,6 +129,7 @@ class _ExploradorState extends ConsumerState<_Explorador> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (folderId == null) AvisosDelGrupo(grupo: grupo),
+        if (folderId == null) CursoDelGrupo(grupo: grupo),
         _Breadcrumbs(grupo: grupo, ruta: ruta, onTap: _abrirCarpeta),
         Expanded(
           child: carpetaNoExiste

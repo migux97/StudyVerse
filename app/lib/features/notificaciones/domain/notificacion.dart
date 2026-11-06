@@ -13,7 +13,10 @@ enum TipoNotificacion {
   revision(Icons.task_alt),
   pedido(Icons.front_hand_outlined),
   tareaAsignada(Icons.assignment_ind_outlined),
-  chat(Icons.forum_outlined);
+  chat(Icons.forum_outlined),
+  curso(Icons.school_outlined),
+  entrega(Icons.assignment_outlined),
+  nota(Icons.grading_outlined);
 
   const TipoNotificacion(this.icono);
   final IconData icono;

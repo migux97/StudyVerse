@@ -70,6 +70,8 @@ class ActivityItem {
     'aviso_docente' => '${v('mandó', 'mandaste')} un aviso',
     'devolucion' => '${v('dejó', 'dejaste')} una devolución en "$titulo"',
     'curso_sumado' => '${v('sumó', 'sumaste')} el grupo al curso "${p['curso'] ?? ''}"',
+    'trabajo_entregado' => '${v('entregó', 'entregaste')} "${p['trabajo'] ?? ''}" (${p['archivo'] ?? 'archivo'}, v${p['version'] ?? ''})',
+    'trabajo_corregido' => '${v('corrigió', 'corregiste')} "${p['trabajo'] ?? ''}": ${p['resultado'] ?? ''}',
     'curso_quitado' => '${v('quitó', 'quitaste')} el grupo del curso "${p['curso'] ?? ''}"',
     'miembro_salio' when p['por'] != null => v('fue quitado del grupo por ${p['por']}', 'fuiste quitado del grupo por ${p['por']}'),
     'miembro_salio' => v('salió del grupo', 'saliste del grupo'),

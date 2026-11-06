@@ -121,7 +121,10 @@ class _CursoCard extends StatelessWidget {
           child: Icon(Icons.school_outlined, color: scheme.onPrimaryContainer),
         ),
         title: Text(curso.nombre, style: Theme.of(context).textTheme.titleMedium),
-        subtitle: Text(n == 0 ? 'Todavía no se sumó ningún grupo' : (n == 1 ? '1 grupo' : '$n grupos')),
+        subtitle: Text([
+          n == 0 ? 'Todavía no se sumó ningún grupo' : (n == 1 ? '1 grupo' : '$n grupos'),
+          if (!curso.soyTitular) 'Sos ayudante',
+        ].join(' · ')),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => context.push(Routes.curso(curso.id)),
       ),

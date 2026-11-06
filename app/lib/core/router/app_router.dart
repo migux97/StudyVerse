@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/cursos/presentation/material_grupo_screen.dart';
+import '../../features/entregas/presentation/entregas_grupo_screen.dart';
+import '../../features/entregas/presentation/trabajos_docente.dart';
 import '../../features/auth/domain/auth_repository.dart';
 import '../../features/auth/presentation/auth_providers.dart';
 import '../../features/auth/presentation/codigo_screen.dart';
@@ -60,6 +63,9 @@ class Routes {
       ).toString();
   static String unirse(String codigo) => '/unirse/$codigo';
   static String curso(String id) => '/cursos/$id';
+  static String trabajo(String cursoId, String trabajoId) => '/cursos/$cursoId/trabajos/$trabajoId';
+  static String entregas(String id) => '/grupos/$id/entregas';
+  static String material(String id) => '/grupos/$id/material';
   static const notificaciones = '/notificaciones';
 
   static const publicas = {login, registro};
@@ -113,7 +119,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.buscar, builder: (_, _) => const BuscarScreen()),
       GoRoute(path: Routes.calendario, builder: (_, _) => const CalendarioScreen()),
       GoRoute(path: Routes.notificaciones, builder: (_, _) => const NotificacionesScreen()),
-      GoRoute(path: '/cursos/:id', builder: (_, s) => CursoScreen(cursoId: s.pathParameters['id']!)),
+      GoRoute(
+        path: '/cursos/:id',
+        builder: (_, s) => CursoScreen(cursoId: s.pathParameters['id']!),
+        routes: [
+          GoRoute(
+            path: 'trabajos/:trabajoId',
+            builder: (_, s) =>
+                TrabajoScreen(cursoId: s.pathParameters['id']!, trabajoId: s.pathParameters['trabajoId']!),
+          ),
+        ],
+      ),
       GoRoute(
         path: Routes.perfil,
         builder: (_, _) => const ProfileScreen(),
@@ -123,6 +139,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/grupos/:id',
         builder: (_, s) => GroupScreen(groupId: s.pathParameters['id']!),
         routes: [
+          GoRoute(path: 'entregas', builder: (_, s) => EntregasGrupoScreen(groupId: s.pathParameters['id']!)),
+          GoRoute(path: 'material', builder: (_, s) => MaterialGrupoScreen(groupId: s.pathParameters['id']!)),
           GoRoute(
             path: 'miembros',
             builder: (_, s) => MembersScreen(groupId: s.pathParameters['id']!),

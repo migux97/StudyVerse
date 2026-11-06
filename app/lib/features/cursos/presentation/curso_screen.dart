@@ -14,8 +14,12 @@ import 'inicio_docente.dart';
 import '../../avisos/domain/aviso.dart';
 import '../../avisos/presentation/avisos_providers.dart';
 import '../../avisos/presentation/avisos_widgets.dart';
+import '../../entregas/presentation/trabajos_docente.dart';
+import 'curso_paneles.dart';
 
-/// Un curso del docente: su código y los grupos que se sumaron.
+/// Un curso del docente, en pestañas: los grupos (tablero), los trabajos para
+/// entregar y corregir, los alumnos (aportes y planilla de notas), el material
+/// y las fechas.
 class CursoScreen extends ConsumerWidget {
   const CursoScreen({super.key, required this.cursoId});
   final String cursoId;
@@ -32,19 +36,34 @@ class CursoScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final curso = ref.watch(cursoProvider(cursoId));
     final grupos = ref.watch(gruposDelCursoProvider(cursoId));
-    final c = curso.value;
+    final c = curso.value?.conTitular(ref.watch(soyTitularProvider(cursoId)).value ?? false);
 
-    return Scaffold(
+    return DefaultTabController(
+      length: 5,
+      child: Scaffold(
       appBar: AppBar(
         // Abierto desde un link no hay pantalla anterior: vuelve a Mis cursos.
         leading: BackButton(onPressed: () => context.canPop() ? context.pop() : context.go(Routes.grupos)),
         title: Text(c?.nombre ?? 'Curso'),
+        bottom: const TabBar(
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
+          tabs: [
+            Tab(text: 'Grupos'),
+            Tab(text: 'Trabajos'),
+            Tab(text: 'Alumnos'),
+            Tab(text: 'Material'),
+            Tab(text: 'Fechas'),
+          ],
+        ),
         actions: [
           if (c != null)
             PopupMenuButton<String>(
               tooltip: 'Más opciones',
               onSelected: (op) async {
                 switch (op) {
+                  case 'docentes':
+                    await verDocentes(context, curso: c, soyTitular: c.soyTitular);
                   case 'nombre':
                     final nombre = await pedirTexto(
                       context,
@@ -77,9 +96,13 @@ class CursoScreen extends ConsumerWidget {
                     });
                 }
               },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'nombre', child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Cambiar nombre'))),
-                PopupMenuItem(value: 'borrar', child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Eliminar curso'))),
+              itemBuilder: (_) => [
+                const PopupMenuItem(
+                    value: 'docentes', child: ListTile(leading: Icon(Icons.supervisor_account_outlined), title: Text('Docentes del curso'))),
+                if (c.soyTitular) ...const [
+                  PopupMenuItem(value: 'nombre', child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Cambiar nombre'))),
+                  PopupMenuItem(value: 'borrar', child: ListTile(leading: Icon(Icons.delete_outline), title: Text('Eliminar curso'))),
+                ],
               ],
             ),
         ],
@@ -90,12 +113,14 @@ class CursoScreen extends ConsumerWidget {
             texto: error is CursosFailure ? error.mensaje : 'Algo salió mal. Probá de nuevo',
             accion: FilledButton(onPressed: () => ref.invalidate(cursoProvider(cursoId)), child: const Text('Reintentar')),
           ),
-        AsyncValue(value: final Curso c) => RefreshIndicator(
+        AsyncValue(hasValue: true) when c != null => TabBarView(children: [
+          RefreshIndicator(
             onRefresh: () {
               ref.invalidate(avisosDelCursoProvider(cursoId));
               return ref.refresh(gruposDelCursoProvider(cursoId).future);
             },
             child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
               children: [
                 Center(
@@ -104,7 +129,7 @@ class CursoScreen extends ConsumerWidget {
                     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                       _CodigoCard(
                         curso: c,
-                        onRegenerar: () async {
+                        onRegenerar: !c.soyTitular ? null : () async {
                           final ok = await confirmar(
                             context,
                             titulo: '¿Generar un código nuevo?',
@@ -121,6 +146,15 @@ class CursoScreen extends ConsumerWidget {
                       const SizedBox(height: 16),
                       _AvisosDelCurso(curso: c, grupos: grupos.value ?? const []),
                       const SizedBox(height: 16),
+                      if (grupos.value case final gs? when gs.isNotEmpty) ...[
+                        ResumenCurso(
+                          cursoId: c.id,
+                          grupos: gs,
+                          soloInactivos: ref.watch(soloInactivosProvider(c.id)),
+                          onSoloInactivos: (v) => ref.read(soloInactivosProvider(c.id).notifier).poner(v),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                       ...switch (grupos) {
                         AsyncValue(value: final List<GrupoDelCurso> gs) when gs.isEmpty => [
                             const Padding(
@@ -137,7 +171,15 @@ class CursoScreen extends ConsumerWidget {
                               padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
                               child: Text('Grupos · ${gs.length}', style: Theme.of(context).textTheme.titleSmall),
                             ),
-                            for (final g in gs) _GrupoCard(grupo: g),
+                            Builder(builder: (_) {
+                              final ahora = DateTime.now();
+                              // Si ya no queda ninguno quieto, el filtro no esconde todo.
+                              final solo = ref.watch(soloInactivosProvider(c.id)) && gs.any((g) => g.inactivo(ahora));
+                              return Column(children: [
+                                for (final g in gs)
+                                  if (!solo || g.inactivo(ahora)) _GrupoCard(grupo: g),
+                              ]);
+                            }),
                           ],
                         AsyncValue(hasError: true) => [
                             const Padding(padding: EdgeInsets.all(24), child: Text('No pudimos traer los grupos. Probá de nuevo')),
@@ -150,8 +192,14 @@ class CursoScreen extends ConsumerWidget {
               ],
             ),
           ),
+          TrabajosDelCurso(curso: c),
+          AlumnosDelCurso(curso: c),
+          ListaMaterial(cursoId: c.id, esDocente: true),
+          FechasDelCurso(cursoId: c.id),
+        ]),
         _ => const Center(child: CircularProgressIndicator()),
       },
+      ),
     );
   }
 }
@@ -159,7 +207,7 @@ class CursoScreen extends ConsumerWidget {
 class _CodigoCard extends StatelessWidget {
   const _CodigoCard({required this.curso, required this.onRegenerar});
   final Curso curso;
-  final VoidCallback onRegenerar;
+  final VoidCallback? onRegenerar;
 
   @override
   Widget build(BuildContext context) {
@@ -184,11 +232,12 @@ class _CodigoCard extends StatelessWidget {
               label: const Text('Copiar'),
               onPressed: () => copiarCodigo(context, curso),
             ),
-            TextButton.icon(
-              icon: const Icon(Icons.refresh, size: 18),
-              label: const Text('Generar otro'),
-              onPressed: onRegenerar,
-            ),
+            if (onRegenerar != null)
+              TextButton.icon(
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Generar otro'),
+                onPressed: onRegenerar,
+              ),
           ]),
         ]),
       ),
@@ -232,6 +281,18 @@ class _GrupoCard extends StatelessWidget {
             ),
             if (g.materias.isNotEmpty)
               Text(g.materias.join(' · '), style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+            const SizedBox(height: 4),
+            Wrap(spacing: 8, runSpacing: 4, children: [
+              Text(ultimaActividad(g.ultimaActividad, DateTime.now()),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                      color: g.inactivo(DateTime.now()) ? scheme.tertiary : scheme.onSurfaceVariant)),
+              if (g.versionesSemana > 0)
+                Text('· ${g.versionesSemana} ${g.versionesSemana == 1 ? 'versión' : 'versiones'} esta semana',
+                    style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
+              if (g.tareasVencidas > 0)
+                Text('· ${g.tareasVencidas} ${g.tareasVencidas == 1 ? 'tarea vencida' : 'tareas vencidas'}',
+                    style: theme.textTheme.bodySmall?.copyWith(color: scheme.error)),
+            ]),
             const SizedBox(height: 10),
             if (progreso == null)
               Text('Todavía no cargaron tareas', style: theme.textTheme.bodySmall)

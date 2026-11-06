@@ -9,7 +9,7 @@ import '../../../core/realtime/canales.dart';
 
 /// El grupo con la cantidad de integrantes y sus materias.
 const _selectGrupo = '*, group_members(count), materias:folders(nombre, es_materia), '
-    'curso:cursos(nombre, docente:profiles(nombre))';
+    'curso:cursos(nombre, docente:profiles!cursos_docente_id_fkey(nombre))';
 
 class SupabaseGroupsRepository implements GroupsRepository {
   SupabaseGroupsRepository(this._client);
