@@ -6,12 +6,16 @@
 # Uso (desde la raíz del repo, con `npx supabase start` corriendo):
 #   ./supabase/scripts/configurar-funciones-local.ps1 -BotToken "123456:ABC..."
 #   ./supabase/scripts/configurar-funciones-local.ps1 -ApiBase "http://host.docker.internal:8081"   # Telegram simulado
+#   ./supabase/scripts/configurar-funciones-local.ps1 -FcmCuentaServicio "C:/ruta/cuenta-de-servicio.json"   # push
 #
 # No guarda nada en el repo: .env está en .gitignore y Vault vive en la base local.
 
 param(
   [string]$BotToken = "",
   [string]$ApiBase = "",
+  # JSON de la cuenta de servicio de Firebase (para enviar-push).
+  [string]$FcmCuentaServicio = "",
+  [string]$WebUrl = "",
   [string]$Contenedor = "supabase_db_studyverse"
 )
 
@@ -40,6 +44,12 @@ if (-not $valores['TELEGRAM_WEBHOOK_SECRET']) { $valores['TELEGRAM_WEBHOOK_SECRE
 if ($BotToken) { $valores['TELEGRAM_BOT_TOKEN'] = $BotToken }
 if (-not $valores['TELEGRAM_BOT_TOKEN']) { $valores['TELEGRAM_BOT_TOKEN'] = '' }
 if ($ApiBase) { $valores['TELEGRAM_API_BASE'] = $ApiBase }
+if ($FcmCuentaServicio) {
+  # En una sola línea, que es como lo lee el .env.
+  $valores['FCM_SERVICE_ACCOUNT'] = (Get-Content $FcmCuentaServicio -Raw | ConvertFrom-Json | ConvertTo-Json -Compress -Depth 5)
+}
+if ($WebUrl) { $valores['WEB_URL'] = $WebUrl }
+if (-not $valores['WEB_URL']) { $valores['WEB_URL'] = 'http://localhost:3000' }
 
 $contenido = ($valores.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join "`n"
 [IO.File]::WriteAllText((Resolve-Path (Split-Path $envFile)).Path + "\.env", "$contenido`n", (New-Object Text.UTF8Encoding $false))
