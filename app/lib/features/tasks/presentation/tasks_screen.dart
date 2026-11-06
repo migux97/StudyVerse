@@ -222,11 +222,12 @@ class _TareasState extends ConsumerState<_Tareas> {
                       onChanged: _setAprobar,
                     )
                   else if (grupo.aprobarTareas)
-                    const ListTile(
-                      contentPadding: EdgeInsets.symmetric(horizontal: 4),
-                      leading: Icon(Icons.verified_outlined),
-                      title: Text('En este grupo, un admin aprueba las tareas'),
-                      subtitle: Text('Cuando termines una, marcala como entregada'),
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                      leading: const Icon(Icons.verified_outlined),
+                      title: const Text('En este grupo, un admin aprueba las tareas'),
+                      // Al docente no le toca entregar.
+                      subtitle: grupo.soloLectura ? null : const Text('Cuando termines una, marcala como entregada'),
                     ),
                   if (entregadas.isNotEmpty) ...[
                     _Titulo(grupo.soyAdmin ? 'Para revisar' : 'Entregadas', entregadas.length),

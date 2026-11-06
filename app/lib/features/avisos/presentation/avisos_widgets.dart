@@ -249,7 +249,7 @@ class DevolucionesDeTarea extends ConsumerWidget {
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(
-                'Devolución de ${ultima.autor == miId ? 'vos' : (ultima.autorNombre ?? 'tu docente')} · '
+                '${ultima.autor == miId ? 'Tu devolución' : 'Devolución de ${ultima.autorNombre ?? 'tu docente'}'} · '
                 '${formatearFecha(ultima.createdAt, DateTime.now())}',
                 style: theme.textTheme.labelMedium?.copyWith(color: scheme.onSecondaryContainer),
               ),

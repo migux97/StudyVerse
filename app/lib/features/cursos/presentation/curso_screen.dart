@@ -36,6 +36,8 @@ class CursoScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        // Abierto desde un link no hay pantalla anterior: vuelve a Mis cursos.
+        leading: BackButton(onPressed: () => context.canPop() ? context.pop() : context.go(Routes.grupos)),
         title: Text(c?.nombre ?? 'Curso'),
         actions: [
           if (c != null)
